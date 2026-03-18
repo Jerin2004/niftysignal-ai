@@ -1,0 +1,296 @@
+2026-03-18 09:04:15,934 [INFO] NiftySignal AI Scheduler starting...
+2026-03-18 09:04:15,935 [INFO] Current IST time: 2026-03-18 09:04:15
+2026-03-18 09:04:15,935 [INFO] Market day: True | Market hours: False
+2026-03-18 09:04:15,935 [INFO] Running initial fetch on startup...
+2026-03-18 09:04:15,935 [INFO] Fetching indices...
+2026-03-18 09:04:17,171 [INFO] Indices: Nifty=23581.15 BankNifty=54876.0
+2026-03-18 09:04:17,172 [INFO] Fetching global news...
+2026-03-18 09:04:17,174 [INFO] Saved 0 news articles
+2026-03-18 09:04:17,174 [INFO] === Fetching all stocks ===
+2026-03-18 09:04:17,326 [ERROR]   FAILED RELIANCE.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:17,760 [ERROR]   FAILED TCS.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:18,205 [ERROR]   FAILED HDFCBANK.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:18,668 [ERROR]   FAILED INFY.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:19,111 [ERROR]   FAILED ICICIBANK.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:19,667 [ERROR]   FAILED HINDUNILVR.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:20,116 [ERROR]   FAILED ITC.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:20,552 [ERROR]   FAILED KOTAKBANK.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:20,989 [ERROR]   FAILED LT.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:21,430 [ERROR]   FAILED AXISBANK.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:21,980 [ERROR]   FAILED SBIN.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:22,427 [ERROR]   FAILED WIPRO.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:22,888 [ERROR]   FAILED HCLTECH.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:24,163 [ERROR] HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: TATAMOTORS.NS"}}}
+2026-03-18 09:04:24,845 [ERROR] $TATAMOTORS.NS: possibly delisted; no price data found  (period=90d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-18 09:04:24,845 [ERROR]   FAILED TATAMOTORS.NS: Not enough history
+2026-03-18 09:04:25,274 [ERROR]   FAILED MARUTI.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:25,736 [ERROR]   FAILED SUNPHARMA.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:26,173 [ERROR]   FAILED DRREDDY.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:26,608 [ERROR]   FAILED BAJFINANCE.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:27,059 [ERROR]   FAILED TITAN.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:27,503 [ERROR]   FAILED NESTLEIND.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:27,952 [ERROR]   FAILED POWERGRID.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:28,389 [ERROR]   FAILED NTPC.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:28,856 [ERROR]   FAILED ONGC.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:29,295 [ERROR]   FAILED ADANIENT.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:29,742 [ERROR]   FAILED COALINDIA.NS: 'DataFrame' object has no attribute 'ta'
+2026-03-18 09:04:30,049 [INFO] === Done: 0 BUY � 0 SELL � 0 HOLD ===
+2026-03-18 09:04:30,049 [INFO] Schedule set:
+2026-03-18 09:04:30,056 [INFO] Scheduler running. Press Ctrl+C to stop.
+2026-03-18 09:06:11,234 [INFO] NiftySignal AI Scheduler starting...
+2026-03-18 09:06:11,235 [INFO] Current IST time: 2026-03-18 09:06:11
+2026-03-18 09:06:11,235 [INFO] Market day: True | Market hours: False
+2026-03-18 09:06:11,235 [INFO] Running initial fetch on startup...
+2026-03-18 09:06:11,235 [INFO] Fetching indices...
+2026-03-18 09:06:12,270 [INFO] Saved -> data/indices_latest.json
+2026-03-18 09:06:12,270 [INFO] Indices: Nifty=23581.15 BankNifty=54876.0
+2026-03-18 09:06:12,270 [INFO] Fetching global news...
+2026-03-18 09:06:12,271 [INFO] Saved -> data/news_latest.json
+2026-03-18 09:06:12,271 [INFO] Saved 0 news articles
+2026-03-18 09:06:12,272 [INFO] === Fetching all stocks ===
+2026-03-18 09:06:12,427 [INFO]   RELIANCE     ₹ 1397.60  +0.18%  RSI:47.0  BUY (50%)
+2026-03-18 09:06:12,870 [INFO]   TCS          ₹ 2391.70  -0.73%  RSI:18.1  HOLD (0%)
+2026-03-18 09:06:13,343 [INFO]   HDFCBANK     ₹  845.35  +0.57%  RSI:36.7  HOLD (0%)
+2026-03-18 09:06:13,797 [INFO]   INFY         ₹ 1232.90  -1.35%  RSI:21.7  BUY (50%)
+2026-03-18 09:06:14,251 [INFO]   ICICIBANK    ₹ 1288.70  +1.24%  RSI:38.0  HOLD (17%)
+2026-03-18 09:06:14,705 [INFO]   HINDUNILVR   ₹ 2158.20  -0.80%  RSI:32.5  HOLD (0%)
+2026-03-18 09:06:15,167 [INFO]   ITC          ₹  304.85  -1.10%  RSI:38.3  HOLD (17%)
+2026-03-18 09:06:15,650 [INFO]   KOTAKBANK    ₹  374.20  +1.18%  RSI:31.4  HOLD (17%)
+2026-03-18 09:06:16,209 [INFO]   LT           ₹ 3542.80  +2.12%  RSI:32.0  HOLD (8%)
+2026-03-18 09:06:16,665 [INFO]   AXISBANK     ₹ 1228.10  +1.10%  RSI:35.1  HOLD (0%)
+2026-03-18 09:06:17,154 [INFO]   SBIN         ₹ 1064.70  -0.19%  RSI:36.0  HOLD (17%)
+2026-03-18 09:06:17,614 [INFO]   WIPRO        ₹  191.32  -1.94%  RSI:25.0  BUY (42%)
+2026-03-18 09:06:18,081 [INFO]   HCLTECH      ₹ 1321.10  -0.56%  RSI:25.9  BUY (67%)
+2026-03-18 09:06:19,358 [ERROR] HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: TATAMOTORS.NS"}}}
+2026-03-18 09:06:20,152 [ERROR] $TATAMOTORS.NS: possibly delisted; no price data found  (period=90d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-18 09:06:20,152 [ERROR]   FAILED TATAMOTORS.NS: Not enough history
+2026-03-18 09:06:20,598 [INFO]   MARUTI       ₹12972.00  +1.69%  RSI:31.8  HOLD (17%)
+2026-03-18 09:06:21,063 [INFO]   SUNPHARMA    ₹ 1794.40  +0.63%  RSI:59.2  HOLD (17%)
+2026-03-18 09:06:21,509 [INFO]   DRREDDY      ₹ 1283.80  +0.54%  RSI:49.7  HOLD (0%)
+2026-03-18 09:06:21,957 [INFO]   BAJFINANCE   ₹  868.60  -1.09%  RSI:30.8  HOLD (17%)
+2026-03-18 09:06:22,406 [INFO]   TITAN        ₹ 4090.50  -0.01%  RSI:41.9  HOLD (25%)
+2026-03-18 09:06:22,854 [INFO]   NESTLEIND    ₹ 1206.90  -0.54%  RSI:32.3  HOLD (17%)
+2026-03-18 09:06:23,303 [INFO]   POWERGRID    ₹  298.50  +0.25%  RSI:55.5  HOLD (17%)
+2026-03-18 09:06:23,758 [INFO]   NTPC         ₹  383.35  +0.25%  RSI:58.8  SELL (33%)
+2026-03-18 09:06:24,210 [INFO]   ONGC         ₹  264.75  +1.65%  RSI:47.0  HOLD (0%)
+2026-03-18 09:06:24,669 [INFO]   ADANIENT     ₹ 1975.40  -0.13%  RSI:36.3  HOLD (25%)
+2026-03-18 09:06:25,109 [INFO]   COALINDIA    ₹  462.25  +0.42%  RSI:63.9  BUY (33%)
+2026-03-18 09:06:25,411 [INFO] Saved -> data/stocks_latest.json
+2026-03-18 09:06:25,414 [INFO] Saved -> data/stocks_2026-03-18.json
+2026-03-18 09:06:25,414 [INFO] === Done: 5 BUY · 1 SELL · 18 HOLD ===
+2026-03-18 09:06:25,414 [INFO] Schedule set:
+2026-03-18 09:06:25,415 [INFO]   09:00 IST → indices + news pre-market
+2026-03-18 09:06:25,415 [INFO]   09:15 IST → full stock fetch on market open
+2026-03-18 09:06:25,415 [INFO]   Every 15m → intraday refresh (market hours only)
+2026-03-18 09:06:25,415 [INFO]   15:35 IST → end-of-day snapshot + signal history
+2026-03-18 09:06:25,415 [INFO]   18:00 IST → post-market news refresh
+2026-03-18 09:06:25,415 [INFO] Scheduler running. Press Ctrl+C to stop.
+2026-03-18 09:15:25,420 [INFO] === Fetching all stocks ===
+2026-03-18 09:15:25,662 [INFO]   RELIANCE     ₹ 1403.70  +0.44%  RSI:48.6  BUY (50%)
+2026-03-18 09:15:26,214 [INFO]   TCS          ₹ 2419.60  +1.17%  RSI:23.6  HOLD (0%)
+2026-03-18 09:15:26,666 [INFO]   HDFCBANK     ₹  840.80  -0.54%  RSI:35.5  HOLD (0%)
+2026-03-18 09:15:27,129 [INFO]   INFY         ₹ 1239.00  +0.49%  RSI:24.0  BUY (50%)
+2026-03-18 09:15:27,569 [INFO]   ICICIBANK    ₹ 1288.30  -0.03%  RSI:37.9  HOLD (17%)
+2026-03-18 09:15:28,026 [INFO]   HINDUNILVR   ₹ 2173.90  +0.73%  RSI:35.7  HOLD (17%)
+2026-03-18 09:15:28,549 [INFO]   ITC          ₹  306.25  +0.46%  RSI:40.3  HOLD (0%)
+2026-03-18 09:15:29,005 [INFO]   KOTAKBANK    ₹  374.90  +0.19%  RSI:32.1  HOLD (17%)
+2026-03-18 09:15:29,458 [INFO]   LT           ₹ 3556.00  +0.37%  RSI:32.8  HOLD (8%)
+2026-03-18 09:15:29,929 [INFO]   AXISBANK     ₹ 1231.10  +0.24%  RSI:35.9  HOLD (0%)
+2026-03-18 09:15:30,387 [INFO]   SBIN         ₹ 1069.00  +0.40%  RSI:37.3  HOLD (17%)
+2026-03-18 09:15:30,832 [INFO]   WIPRO        ₹  194.07  +1.44%  RSI:30.8  BUY (42%)
+2026-03-18 09:15:31,280 [INFO]   HCLTECH      ₹ 1332.40  +0.86%  RSI:29.8  BUY (67%)
+2026-03-18 09:15:32,422 [ERROR] HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: TATAMOTORS.NS"}}}
+2026-03-18 09:15:33,078 [ERROR] $TATAMOTORS.NS: possibly delisted; no price data found  (period=90d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-18 09:15:33,078 [ERROR]   FAILED TATAMOTORS.NS: Not enough history
+2026-03-18 09:15:33,517 [INFO]   MARUTI       ₹13128.00  +1.20%  RSI:34.7  HOLD (17%)
+2026-03-18 09:15:33,978 [INFO]   SUNPHARMA    ₹ 1795.70  +0.07%  RSI:59.5  SELL (33%)
+2026-03-18 09:15:34,405 [INFO]   DRREDDY      ₹ 1285.90  +0.16%  RSI:50.2  HOLD (0%)
+2026-03-18 09:15:34,847 [INFO]   BAJFINANCE   ₹  885.05  +1.89%  RSI:36.1  HOLD (0%)
+2026-03-18 09:15:35,296 [INFO]   TITAN        ₹ 4080.60  -0.24%  RSI:41.1  HOLD (25%)
+2026-03-18 09:15:35,751 [INFO]   NESTLEIND    ₹ 1209.00  +0.17%  RSI:33.2  HOLD (17%)
+2026-03-18 09:15:36,188 [INFO]   POWERGRID    ₹  300.90  +0.80%  RSI:57.9  HOLD (17%)
+2026-03-18 09:15:36,636 [INFO]   NTPC         ₹  384.90  +0.40%  RSI:59.9  SELL (33%)
+2026-03-18 09:15:37,094 [INFO]   ONGC         ₹  264.50  -0.09%  RSI:46.7  HOLD (0%)
+2026-03-18 09:15:37,551 [INFO]   ADANIENT     ₹ 1989.00  +0.69%  RSI:38.4  HOLD (25%)
+2026-03-18 09:15:38,067 [INFO]   COALINDIA    ₹  457.55  -1.02%  RSI:60.6  BUY (33%)
+2026-03-18 09:15:38,370 [INFO] Saved -> data/stocks_latest.json
+2026-03-18 09:15:38,373 [INFO] Saved -> data/stocks_2026-03-18.json
+2026-03-18 09:15:38,373 [INFO] === Done: 5 BUY · 2 SELL · 17 HOLD ===
+2026-03-18 09:21:38,379 [INFO] --- Intraday refresh ---
+2026-03-18 09:21:38,379 [INFO] Fetching indices...
+2026-03-18 09:21:39,011 [INFO] Saved -> data/indices_latest.json
+2026-03-18 09:21:39,012 [INFO] Indices: Nifty=23716.4 BankNifty=55034.05
+2026-03-18 09:21:39,012 [INFO] === Fetching all stocks ===
+2026-03-18 09:21:39,227 [INFO]   RELIANCE     ₹ 1406.70  +0.65%  RSI:49.3  BUY (50%)
+2026-03-18 09:21:39,883 [INFO]   TCS          ₹ 2447.50  +2.33%  RSI:28.4  BUY (50%)
+2026-03-18 09:21:40,573 [INFO]   HDFCBANK     ₹  838.15  -0.85%  RSI:34.8  HOLD (17%)
+2026-03-18 09:21:41,282 [INFO]   INFY         ₹ 1252.90  +1.62%  RSI:28.7  BUY (50%)
+2026-03-18 09:21:42,010 [INFO]   ICICIBANK    ₹ 1282.30  -0.50%  RSI:36.9  HOLD (17%)
+2026-03-18 09:21:42,683 [INFO]   HINDUNILVR   ₹ 2164.00  +0.27%  RSI:33.7  HOLD (0%)
+2026-03-18 09:21:43,386 [INFO]   ITC          ₹  305.75  +0.30%  RSI:39.6  HOLD (0%)
+2026-03-18 09:21:43,860 [INFO]   KOTAKBANK    ₹  375.85  +0.44%  RSI:32.9  HOLD (17%)
+2026-03-18 09:21:44,317 [INFO]   LT           ₹ 3586.50  +1.23%  RSI:34.6  HOLD (8%)
+2026-03-18 09:21:44,780 [INFO]   AXISBANK     ₹ 1239.50  +0.93%  RSI:37.8  HOLD (0%)
+2026-03-18 09:21:45,237 [INFO]   SBIN         ₹ 1068.30  +0.34%  RSI:37.1  HOLD (17%)
+2026-03-18 09:21:45,774 [INFO]   WIPRO        ₹  195.54  +2.21%  RSI:33.5  BUY (42%)
+2026-03-18 09:21:46,272 [INFO]   HCLTECH      ₹ 1346.40  +1.92%  RSI:34.1  BUY (67%)
+2026-03-18 09:21:47,195 [ERROR] $TATAMOTORS.NS: possibly delisted; no price data found  (period=90d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-18 09:21:47,195 [ERROR]   FAILED TATAMOTORS.NS: Not enough history
+2026-03-18 09:21:47,626 [INFO]   MARUTI       ₹13105.00  +1.03%  RSI:34.3  HOLD (17%)
+2026-03-18 09:21:48,086 [INFO]   SUNPHARMA    ₹ 1804.00  +0.53%  RSI:61.2  SELL (33%)
+2026-03-18 09:21:48,543 [INFO]   DRREDDY      ₹ 1285.80  +0.16%  RSI:50.2  HOLD (0%)
+2026-03-18 09:21:48,973 [INFO]   BAJFINANCE   ₹  881.05  +1.43%  RSI:34.9  HOLD (17%)
+2026-03-18 09:21:49,412 [INFO]   TITAN        ₹ 4116.50  +0.64%  RSI:44.6  HOLD (8%)
+2026-03-18 09:21:49,852 [INFO]   NESTLEIND    ₹ 1209.40  +0.21%  RSI:33.4  HOLD (17%)
+2026-03-18 09:21:50,292 [INFO]   POWERGRID    ₹  304.00  +1.84%  RSI:60.6  HOLD (0%)
+2026-03-18 09:21:50,722 [INFO]   NTPC         ₹  385.10  +0.46%  RSI:60.0  SELL (33%)
+2026-03-18 09:21:51,165 [INFO]   ONGC         ₹  265.00  +0.09%  RSI:47.3  HOLD (0%)
+2026-03-18 09:21:51,627 [INFO]   ADANIENT     ₹ 2014.70  +1.99%  RSI:42.0  HOLD (25%)
+2026-03-18 09:21:52,068 [INFO]   COALINDIA    ₹  456.50  -1.24%  RSI:59.9  BUY (33%)
+2026-03-18 09:21:52,372 [INFO] Saved -> data/stocks_latest.json
+2026-03-18 09:21:52,374 [INFO] Saved -> data/stocks_2026-03-18.json
+2026-03-18 09:21:52,374 [INFO] === Done: 6 BUY · 2 SELL · 16 HOLD ===
+2026-03-18 09:37:20,857 [INFO] --- Intraday refresh ---
+2026-03-18 09:37:20,857 [INFO] Fetching indices...
+2026-03-18 09:37:22,433 [INFO] Saved -> data/indices_latest.json
+2026-03-18 09:37:22,433 [INFO] Indices: Nifty=23718.6 BankNifty=54994.2
+2026-03-18 09:37:22,434 [INFO] === Fetching all stocks ===
+2026-03-18 09:37:22,569 [INFO]   RELIANCE     ₹ 1408.90  +0.81%  RSI:49.8  BUY (50%)
+2026-03-18 09:37:23,005 [INFO]   TCS          ₹ 2460.00  +2.86%  RSI:30.3  BUY (50%)
+2026-03-18 09:37:23,448 [INFO]   HDFCBANK     ₹  836.40  -1.06%  RSI:34.4  HOLD (17%)
+2026-03-18 09:37:23,904 [INFO]   INFY         ₹ 1261.40  +2.31%  RSI:31.3  BUY (50%)
+2026-03-18 09:37:24,413 [INFO]   ICICIBANK    ₹ 1276.50  -0.95%  RSI:36.0  HOLD (17%)
+2026-03-18 09:37:24,856 [INFO]   HINDUNILVR   ₹ 2164.10  +0.27%  RSI:33.8  HOLD (0%)
+2026-03-18 09:37:25,298 [INFO]   ITC          ₹  304.85  +0.00%  RSI:38.3  HOLD (17%)
+2026-03-18 09:37:25,737 [INFO]   KOTAKBANK    ₹  374.40  +0.05%  RSI:31.6  HOLD (17%)
+2026-03-18 09:37:26,187 [INFO]   LT           ₹ 3579.30  +1.03%  RSI:34.2  HOLD (8%)
+2026-03-18 09:37:26,638 [INFO]   AXISBANK     ₹ 1245.90  +1.45%  RSI:39.3  HOLD (0%)
+2026-03-18 09:37:27,096 [INFO]   SBIN         ₹ 1068.90  +0.39%  RSI:37.3  HOLD (17%)
+2026-03-18 09:37:27,550 [INFO]   WIPRO        ₹  195.80  +2.34%  RSI:34.0  BUY (42%)
+2026-03-18 09:37:28,099 [INFO]   HCLTECH      ₹ 1350.30  +2.21%  RSI:35.2  BUY (50%)
+2026-03-18 09:37:28,861 [ERROR] $TATAMOTORS.NS: possibly delisted; no price data found  (period=90d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-18 09:37:28,862 [ERROR]   FAILED TATAMOTORS.NS: Not enough history
+2026-03-18 09:37:29,291 [INFO]   MARUTI       ₹13069.00  +0.75%  RSI:33.6  HOLD (17%)
+2026-03-18 09:37:29,737 [INFO]   SUNPHARMA    ₹ 1798.00  +0.20%  RSI:60.0  SELL (33%)
+2026-03-18 09:37:30,185 [INFO]   DRREDDY      ₹ 1292.90  +0.71%  RSI:52.1  HOLD (0%)
+2026-03-18 09:37:30,736 [INFO]   BAJFINANCE   ₹  876.05  +0.86%  RSI:33.3  HOLD (17%)
+2026-03-18 09:37:31,174 [INFO]   TITAN        ₹ 4111.40  +0.51%  RSI:44.1  HOLD (8%)
+2026-03-18 09:37:31,608 [INFO]   NESTLEIND    ₹ 1209.50  +0.22%  RSI:33.4  HOLD (17%)
+2026-03-18 09:37:32,035 [INFO]   POWERGRID    ₹  302.75  +1.42%  RSI:59.6  HOLD (17%)
+2026-03-18 09:37:32,464 [INFO]   NTPC         ₹  384.40  +0.27%  RSI:59.5  SELL (33%)
+2026-03-18 09:37:32,903 [INFO]   ONGC         ₹  265.15  +0.15%  RSI:47.5  HOLD (0%)
+2026-03-18 09:37:33,442 [INFO]   ADANIENT     ₹ 2019.00  +2.21%  RSI:42.6  HOLD (8%)
+2026-03-18 09:37:33,867 [INFO]   COALINDIA    ₹  456.70  -1.20%  RSI:60.0  BUY (33%)
+2026-03-18 09:37:34,170 [INFO] Saved -> data/stocks_latest.json
+2026-03-18 09:37:34,173 [INFO] Saved -> data/stocks_2026-03-18.json
+2026-03-18 09:37:34,173 [INFO] === Done: 6 BUY · 2 SELL · 16 HOLD ===
+2026-03-18 14:19:46,578 [INFO] --- Intraday refresh ---
+2026-03-18 14:19:46,582 [INFO] Fetching indices...
+2026-03-18 14:19:47,737 [INFO] Saved -> data/indices_latest.json
+2026-03-18 14:19:47,737 [INFO] Indices: Nifty=23838.55 BankNifty=54876.0
+2026-03-18 14:19:47,738 [INFO] === Fetching all stocks ===
+2026-03-18 14:19:47,903 [INFO]   RELIANCE     ₹ 1411.20  +0.97%  RSI:50.4  BUY (50%)
+2026-03-18 14:19:48,364 [INFO]   TCS          ₹ 2454.70  +2.63%  RSI:29.5  BUY (50%)
+2026-03-18 14:19:48,840 [INFO]   HDFCBANK     ₹  845.40  +0.01%  RSI:36.7  HOLD (0%)
+2026-03-18 14:19:49,310 [INFO]   INFY         ₹ 1276.40  +3.53%  RSI:35.5  BUY (33%)
+2026-03-18 14:19:49,774 [INFO]   ICICIBANK    ₹ 1295.20  +0.50%  RSI:39.8  HOLD (17%)
+2026-03-18 14:19:50,237 [INFO]   HINDUNILVR   ₹ 2143.00  -0.70%  RSI:31.0  HOLD (0%)
+2026-03-18 14:19:50,704 [INFO]   ITC          ₹  305.85  +0.33%  RSI:39.7  HOLD (0%)
+2026-03-18 14:19:51,168 [INFO]   KOTAKBANK    ₹  376.70  +0.67%  RSI:33.7  HOLD (17%)
+2026-03-18 14:19:51,618 [INFO]   LT           ₹ 3621.70  +2.23%  RSI:36.6  HOLD (25%)
+2026-03-18 14:19:52,081 [INFO]   AXISBANK     ₹ 1254.20  +2.13%  RSI:41.0  HOLD (0%)
+2026-03-18 14:19:52,561 [INFO]   SBIN         ₹ 1070.00  +0.50%  RSI:37.6  HOLD (17%)
+2026-03-18 14:19:53,030 [INFO]   WIPRO        ₹  195.49  +2.18%  RSI:33.4  BUY (42%)
+2026-03-18 14:19:53,496 [INFO]   HCLTECH      ₹ 1364.30  +3.27%  RSI:38.9  BUY (67%)
+2026-03-18 14:19:54,487 [ERROR] $TATAMOTORS.NS: possibly delisted; no price data found  (period=90d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-18 14:19:54,488 [ERROR]   FAILED TATAMOTORS.NS: Not enough history
+2026-03-18 14:19:54,962 [INFO]   MARUTI       ₹13099.00  +0.98%  RSI:34.2  HOLD (17%)
+2026-03-18 14:19:55,550 [INFO]   SUNPHARMA    ₹ 1783.70  -0.60%  RSI:56.1  SELL (33%)
+2026-03-18 14:19:56,026 [INFO]   DRREDDY      ₹ 1296.10  +0.96%  RSI:52.9  HOLD (0%)
+2026-03-18 14:19:56,480 [INFO]   BAJFINANCE   ₹  874.85  +0.72%  RSI:32.9  HOLD (17%)
+2026-03-18 14:19:56,991 [INFO]   TITAN        ₹     nan  +nan%  RSI:41.8  HOLD (8%)
+2026-03-18 14:19:57,586 [INFO]   NESTLEIND    ₹ 1208.40  +0.12%  RSI:32.9  HOLD (17%)
+2026-03-18 14:19:58,042 [INFO]   POWERGRID    ₹  299.25  +0.25%  RSI:56.2  HOLD (17%)
+2026-03-18 14:19:58,490 [INFO]   NTPC         ₹  379.45  -1.02%  RSI:55.0  HOLD (17%)
+2026-03-18 14:19:58,963 [INFO]   ONGC         ₹  265.80  +0.40%  RSI:48.2  HOLD (0%)
+2026-03-18 14:19:59,425 [INFO]   ADANIENT     ₹ 2017.80  +2.15%  RSI:42.5  HOLD (25%)
+2026-03-18 14:19:59,878 [INFO]   COALINDIA    ₹  454.35  -1.71%  RSI:58.5  BUY (33%)
+2026-03-18 14:20:00,181 [INFO] Saved -> data/stocks_latest.json
+2026-03-18 14:20:00,183 [INFO] Saved -> data/stocks_2026-03-18.json
+2026-03-18 14:20:00,183 [INFO] === Done: 6 BUY · 1 SELL · 17 HOLD ===
+2026-03-18 14:35:00,195 [INFO] --- Intraday refresh ---
+2026-03-18 14:35:00,196 [INFO] Fetching indices...
+2026-03-18 14:35:00,930 [INFO] Saved -> data/indices_latest.json
+2026-03-18 14:35:00,930 [INFO] Indices: Nifty=23795.9 BankNifty=55386.8
+2026-03-18 14:35:00,931 [INFO] === Fetching all stocks ===
+2026-03-18 14:35:01,093 [INFO]   RELIANCE     ₹ 1409.20  +0.83%  RSI:49.9  BUY (50%)
+2026-03-18 14:35:01,547 [INFO]   TCS          ₹ 2450.90  +2.48%  RSI:28.9  BUY (50%)
+2026-03-18 14:35:02,007 [INFO]   HDFCBANK     ₹  845.10  -0.03%  RSI:36.6  HOLD (0%)
+2026-03-18 14:35:02,474 [INFO]   INFY         ₹ 1274.50  +3.37%  RSI:35.0  BUY (33%)
+2026-03-18 14:35:02,937 [INFO]   ICICIBANK    ₹ 1292.60  +0.30%  RSI:39.1  HOLD (17%)
+2026-03-18 14:35:03,403 [INFO]   HINDUNILVR   ₹ 2137.70  -0.95%  RSI:30.5  HOLD (0%)
+2026-03-18 14:35:03,865 [INFO]   ITC          ₹  304.90  +0.02%  RSI:38.4  HOLD (17%)
+2026-03-18 14:35:04,323 [INFO]   KOTAKBANK    ₹  375.55  +0.36%  RSI:32.6  HOLD (17%)
+2026-03-18 14:35:04,772 [INFO]   LT           ₹ 3607.10  +1.81%  RSI:35.8  HOLD (25%)
+2026-03-18 14:35:05,312 [INFO]   AXISBANK     ₹ 1254.50  +2.15%  RSI:41.1  HOLD (0%)
+2026-03-18 14:35:05,839 [INFO]   SBIN         ₹ 1069.90  +0.49%  RSI:37.6  HOLD (17%)
+2026-03-18 14:35:06,294 [INFO]   WIPRO        ₹  195.11  +1.98%  RSI:32.7  BUY (42%)
+2026-03-18 14:35:06,750 [INFO]   HCLTECH      ₹ 1361.10  +3.03%  RSI:38.1  BUY (67%)
+2026-03-18 14:35:07,526 [ERROR] $TATAMOTORS.NS: possibly delisted; no price data found  (period=90d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-18 14:35:07,527 [ERROR]   FAILED TATAMOTORS.NS: Not enough history
+2026-03-18 14:35:07,964 [INFO]   MARUTI       ₹13063.00  +0.70%  RSI:33.5  HOLD (17%)
+2026-03-18 14:35:08,412 [INFO]   SUNPHARMA    ₹ 1777.40  -0.95%  RSI:54.4  HOLD (17%)
+2026-03-18 14:35:08,848 [INFO]   DRREDDY      ₹ 1293.60  +0.76%  RSI:52.3  HOLD (0%)
+2026-03-18 14:35:09,290 [INFO]   BAJFINANCE   ₹  875.25  +0.77%  RSI:33.0  HOLD (17%)
+2026-03-18 14:35:09,731 [INFO]   TITAN        ₹ 4142.70  +1.28%  RSI:47.1  HOLD (25%)
+2026-03-18 14:35:10,166 [INFO]   NESTLEIND    ₹ 1203.00  -0.32%  RSI:31.5  HOLD (17%)
+2026-03-18 14:35:10,598 [INFO]   POWERGRID    ₹  300.30  +0.60%  RSI:57.3  HOLD (17%)
+2026-03-18 14:35:11,119 [INFO]   NTPC         ₹  379.10  -1.11%  RSI:54.6  HOLD (17%)
+2026-03-18 14:35:11,586 [INFO]   ONGC         ₹  266.10  +0.51%  RSI:48.6  HOLD (0%)
+2026-03-18 14:35:12,022 [INFO]   ADANIENT     ₹ 2006.40  +1.57%  RSI:40.9  HOLD (25%)
+2026-03-18 14:35:12,461 [INFO]   COALINDIA    ₹  453.60  -1.87%  RSI:58.0  BUY (33%)
+2026-03-18 14:35:12,764 [INFO] Saved -> data/stocks_latest.json
+2026-03-18 14:35:12,766 [INFO] Saved -> data/stocks_2026-03-18.json
+2026-03-18 14:35:12,766 [INFO] === Done: 6 BUY · 0 SELL · 18 HOLD ===
+2026-03-18 15:51:44,886 [INFO] === END OF DAY SNAPSHOT ===
+2026-03-18 15:51:44,886 [INFO] Fetching indices...
+2026-03-18 15:51:45,639 [INFO] Saved -> data/indices_latest.json
+2026-03-18 15:51:45,639 [INFO] Indices: Nifty=23777.8 BankNifty=55326.05
+2026-03-18 15:51:45,639 [INFO] === Fetching all stocks ===
+2026-03-18 15:51:45,809 [INFO]   RELIANCE     ₹ 1408.10  +0.75%  RSI:49.6  BUY (50%)
+2026-03-18 15:51:46,252 [INFO]   TCS          ₹ 2440.80  +2.05%  RSI:27.3  BUY (50%)
+2026-03-18 15:51:46,805 [INFO]   HDFCBANK     ₹  843.05  -0.27%  RSI:36.1  HOLD (0%)
+2026-03-18 15:51:47,255 [INFO]   INFY         ₹ 1267.10  +2.77%  RSI:33.0  BUY (50%)
+2026-03-18 15:51:47,708 [INFO]   ICICIBANK    ₹ 1289.30  +0.05%  RSI:38.2  HOLD (17%)
+2026-03-18 15:51:48,164 [INFO]   HINDUNILVR   ₹ 2135.30  -1.06%  RSI:30.3  HOLD (0%)
+2026-03-18 15:51:48,647 [INFO]   ITC          ₹  304.05  -0.26%  RSI:37.6  HOLD (17%)
+2026-03-18 15:51:49,088 [INFO]   KOTAKBANK    ₹  375.40  +0.32%  RSI:32.5  HOLD (17%)
+2026-03-18 15:51:49,534 [INFO]   LT           ₹ 3607.90  +1.84%  RSI:35.9  HOLD (25%)
+2026-03-18 15:51:49,974 [INFO]   AXISBANK     ₹ 1253.20  +2.04%  RSI:40.8  HOLD (0%)
+2026-03-18 15:51:50,440 [INFO]   SBIN         ₹ 1069.80  +0.48%  RSI:37.6  HOLD (17%)
+2026-03-18 15:51:50,915 [INFO]   WIPRO        ₹  194.30  +1.56%  RSI:31.2  BUY (42%)
+2026-03-18 15:51:51,380 [INFO]   HCLTECH      ₹ 1357.20  +2.73%  RSI:37.0  BUY (50%)
+2026-03-18 15:51:52,672 [ERROR] $TATAMOTORS.NS: possibly delisted; no price data found  (period=90d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-18 15:51:52,672 [ERROR]   FAILED TATAMOTORS.NS: Not enough history
+2026-03-18 15:51:53,127 [INFO]   MARUTI       ₹13048.00  +0.59%  RSI:33.2  HOLD (17%)
+2026-03-18 15:51:53,567 [INFO]   SUNPHARMA    ₹ 1778.30  -0.90%  RSI:54.6  HOLD (17%)
+2026-03-18 15:51:54,016 [INFO]   DRREDDY      ₹ 1294.80  +0.86%  RSI:52.6  HOLD (0%)
+2026-03-18 15:51:54,460 [INFO]   BAJFINANCE   ₹  880.10  +1.32%  RSI:34.6  HOLD (17%)
+2026-03-18 15:51:54,891 [INFO]   TITAN        ₹ 4145.50  +1.34%  RSI:47.3  HOLD (25%)
+2026-03-18 15:51:55,335 [INFO]   NESTLEIND    ₹ 1204.80  -0.17%  RSI:31.8  HOLD (17%)
+2026-03-18 15:51:55,772 [INFO]   POWERGRID    ₹  299.40  +0.30%  RSI:56.4  HOLD (17%)
+2026-03-18 15:51:56,322 [INFO]   NTPC         ₹  378.50  -1.27%  RSI:54.1  HOLD (17%)
+2026-03-18 15:51:56,825 [INFO]   ONGC         ₹  265.00  +0.09%  RSI:47.3  HOLD (0%)
+2026-03-18 15:51:57,260 [INFO]   ADANIENT     ₹ 2007.20  +1.61%  RSI:41.0  HOLD (25%)
+2026-03-18 15:51:57,700 [INFO]   COALINDIA    ₹  455.20  -1.53%  RSI:59.0  BUY (33%)
+2026-03-18 15:51:58,003 [INFO] Saved -> data/stocks_latest.json
+2026-03-18 15:51:58,006 [INFO] Saved -> data/stocks_2026-03-18.json
+2026-03-18 15:51:58,006 [INFO] === Done: 6 BUY · 0 SELL · 18 HOLD ===
+2026-03-18 15:51:58,006 [INFO] Fetching global news...
+2026-03-18 15:51:58,006 [INFO] Saved -> data/news_latest.json
+2026-03-18 15:51:58,007 [INFO] Saved 0 news articles
+2026-03-18 15:51:58,021 [INFO] Saved -> data/signal_history.json
+2026-03-18 15:51:58,021 [INFO] Signal history saved (1 days)
+2026-03-18 18:00:16,550 [INFO] Fetching global news...
+2026-03-18 18:00:16,552 [INFO] Saved -> data/news_latest.json
+2026-03-18 18:00:16,552 [INFO] Saved 0 news articles

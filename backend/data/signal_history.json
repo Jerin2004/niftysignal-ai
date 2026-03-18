@@ -1,0 +1,199 @@
+[
+  {
+    "date": "2026-03-18",
+    "snapshot": [
+      {
+        "sym": "RELIANCE",
+        "signal": "BUY",
+        "price": 1408.1,
+        "change_pct": 0.75,
+        "sentiment": 0.73,
+        "confidence": 0.5
+      },
+      {
+        "sym": "TCS",
+        "signal": "BUY",
+        "price": 2440.8,
+        "change_pct": 2.05,
+        "sentiment": 0.68,
+        "confidence": 0.5
+      },
+      {
+        "sym": "HDFCBANK",
+        "signal": "HOLD",
+        "price": 843.05,
+        "change_pct": -0.27,
+        "sentiment": 0.82,
+        "confidence": 0.0
+      },
+      {
+        "sym": "INFY",
+        "signal": "BUY",
+        "price": 1267.1,
+        "change_pct": 2.77,
+        "sentiment": 0.7,
+        "confidence": 0.5
+      },
+      {
+        "sym": "ICICIBANK",
+        "signal": "HOLD",
+        "price": 1289.3,
+        "change_pct": 0.05,
+        "sentiment": 0.6,
+        "confidence": 0.17
+      },
+      {
+        "sym": "HINDUNILVR",
+        "signal": "HOLD",
+        "price": 2135.3,
+        "change_pct": -1.06,
+        "sentiment": 0.57,
+        "confidence": 0.0
+      },
+      {
+        "sym": "ITC",
+        "signal": "HOLD",
+        "price": 304.05,
+        "change_pct": -0.26,
+        "sentiment": 0.67,
+        "confidence": 0.17
+      },
+      {
+        "sym": "KOTAKBANK",
+        "signal": "HOLD",
+        "price": 375.4,
+        "change_pct": 0.32,
+        "sentiment": 0.88,
+        "confidence": 0.17
+      },
+      {
+        "sym": "LT",
+        "signal": "HOLD",
+        "price": 3607.9,
+        "change_pct": 1.84,
+        "sentiment": 0.51,
+        "confidence": 0.25
+      },
+      {
+        "sym": "AXISBANK",
+        "signal": "HOLD",
+        "price": 1253.2,
+        "change_pct": 2.04,
+        "sentiment": 0.92,
+        "confidence": 0.0
+      },
+      {
+        "sym": "SBIN",
+        "signal": "HOLD",
+        "price": 1069.8,
+        "change_pct": 0.48,
+        "sentiment": 0.58,
+        "confidence": 0.17
+      },
+      {
+        "sym": "WIPRO",
+        "signal": "BUY",
+        "price": 194.3,
+        "change_pct": 1.56,
+        "sentiment": 0.51,
+        "confidence": 0.42
+      },
+      {
+        "sym": "HCLTECH",
+        "signal": "BUY",
+        "price": 1357.2,
+        "change_pct": 2.73,
+        "sentiment": 0.91,
+        "confidence": 0.5
+      },
+      {
+        "sym": "MARUTI",
+        "signal": "HOLD",
+        "price": 13048.0,
+        "change_pct": 0.59,
+        "sentiment": 0.94,
+        "confidence": 0.17
+      },
+      {
+        "sym": "SUNPHARMA",
+        "signal": "HOLD",
+        "price": 1778.3,
+        "change_pct": -0.9,
+        "sentiment": 0.56,
+        "confidence": 0.17
+      },
+      {
+        "sym": "DRREDDY",
+        "signal": "HOLD",
+        "price": 1294.8,
+        "change_pct": 0.86,
+        "sentiment": 0.88,
+        "confidence": 0.0
+      },
+      {
+        "sym": "BAJFINANCE",
+        "signal": "HOLD",
+        "price": 880.1,
+        "change_pct": 1.32,
+        "sentiment": 0.8,
+        "confidence": 0.17
+      },
+      {
+        "sym": "TITAN",
+        "signal": "HOLD",
+        "price": 4145.5,
+        "change_pct": 1.34,
+        "sentiment": 0.51,
+        "confidence": 0.25
+      },
+      {
+        "sym": "NESTLEIND",
+        "signal": "HOLD",
+        "price": 1204.8,
+        "change_pct": -0.17,
+        "sentiment": 0.79,
+        "confidence": 0.17
+      },
+      {
+        "sym": "POWERGRID",
+        "signal": "HOLD",
+        "price": 299.4,
+        "change_pct": 0.3,
+        "sentiment": 0.77,
+        "confidence": 0.17
+      },
+      {
+        "sym": "NTPC",
+        "signal": "HOLD",
+        "price": 378.5,
+        "change_pct": -1.27,
+        "sentiment": 0.66,
+        "confidence": 0.17
+      },
+      {
+        "sym": "ONGC",
+        "signal": "HOLD",
+        "price": 265.0,
+        "change_pct": 0.09,
+        "sentiment": 0.76,
+        "confidence": 0.0
+      },
+      {
+        "sym": "ADANIENT",
+        "signal": "HOLD",
+        "price": 2007.2,
+        "change_pct": 1.61,
+        "sentiment": 0.48,
+        "confidence": 0.25
+      },
+      {
+        "sym": "COALINDIA",
+        "signal": "BUY",
+        "price": 455.2,
+        "change_pct": -1.53,
+        "sentiment": 0.66,
+        "confidence": 0.33
+      }
+    ]
+  }
+]

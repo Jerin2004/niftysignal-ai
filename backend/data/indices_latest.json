@@ -1,0 +1,33 @@
+{
+  "NIFTY50": {
+    "value": 23777.8,
+    "change": 196.65,
+    "change_pct": 0.83,
+    "direction": "up"
+  },
+  "BANKNIFTY": {
+    "value": 55326.05,
+    "change": 450.05,
+    "change_pct": 0.82,
+    "direction": "up"
+  },
+  "SENSEX": {
+    "value": 76704.13,
+    "change": 633.29,
+    "change_pct": 0.83,
+    "direction": "up"
+  },
+  "NIFTYMIDCAP": {
+    "value": 15983.45,
+    "change": 326.7,
+    "change_pct": 2.09,
+    "direction": "up"
+  },
+  "VIX": {
+    "value": 18.72,
+    "change": -1.07,
+    "change_pct": -5.41,
+    "direction": "down"
+  },
+  "last_updated": "2026-03-18T15:51:45.638366+05:30"
+}
