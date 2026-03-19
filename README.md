@@ -1,149 +1,164 @@
-# NiftySignal AI — Indian Stock Market Predictor
+# NiftySignal AI 🇮🇳
 
-Full-stack platform: real NSE/BSE data · AI signals · Options chain · News sentiment
+> AI-powered Indian stock market prediction platform with live NSE data, BUY/SELL signals, options chain analysis and paper trading tracker.
 
----
-
-## What's included
-
-- **25 Nifty 50 stocks** with live prices from Yahoo Finance (NSE)
-- **AI signal engine**: RSI + MACD + EMA20 + News sentiment → BUY/SELL/HOLD
-- **Options chain**: Live Call/Put data with IV, OI, premium, ATM strike
-- **News sentiment**: Keyword-based scoring (upgrade to FinBERT for production)
-- **Interactive charts**: Area charts with period selector (1m/3m/6m/1y)
-- **Market overview**: Nifty 50, Bank Nifty, Sensex, Midcap indices
-- **Sector filter + search + sort** across all stocks
-- **White-label ready**: Change logo/colors in App.js → deploy for brokers
+**Live demo:** https://niftysignal-ai-6f1a.vercel.app
 
 ---
 
-## Quick start (run today)
+## What it does
+
+- **Live signals** — BUY/SELL/HOLD for 54+ NSE stocks using RSI + MACD + EMA20 + News sentiment
+- **Trade plan** — Entry price, stop loss, 3 targets, R:R ratio, position sizing
+- **Options chain** — Live Call/Put data with IV, OI, premium, ATM strike highlighted
+- **Paper trading** — Log signals, track P&L, build win rate history
+- **Market overview** — Live Nifty 50, Bank Nifty, Sensex, India VIX
+- **Auto-refresh** — Updates every 5 minutes during market hours (9:15 AM - 3:30 PM IST)
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python, FastAPI, uvicorn |
+| Data | yfinance (NSE/BSE), NewsAPI |
+| Signals | Pure pandas (RSI, MACD, EMA20, Bollinger Bands) |
+| Broker API | Zerodha Kite Connect |
+| Frontend | React, Vite, Recharts |
+| Deployment | Railway (backend), Vercel (frontend) |
+| CI/CD | GitHub Actions |
+
+---
+
+## Project structure
+
+```
+niftysignal/
+├── backend/
+│   ├── main.py              # FastAPI server + all API endpoints
+│   ├── trading_engine.py    # Target price, stop loss, position sizing
+│   ├── paper_trading.py     # Paper trade tracker
+│   ├── zerodha.py           # Zerodha Kite API integration
+│   ├── scheduler.py         # Standalone data scheduler (optional)
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── .env.example         # Copy to .env and fill your keys
+├── frontend/
+│   ├── src/App.jsx          # Full React app
+│   ├── package.json
+│   └── vercel.json
+├── .github/workflows/
+│   └── deploy.yml           # CI/CD pipeline
+└── README.md
+```
+
+---
+
+## Quick start
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.11+
 - Node.js 18+
-- pip
 
-### Step 1 — Backend
+### Step 1 — Clone
+
+```bash
+git clone https://github.com/Jerin2004/niftysignal-ai.git
+cd niftysignal-ai
+```
+
+### Step 2 — Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
-
-# Optional: add NewsAPI key for live news
-cp .env.example .env
-# Edit .env → add NEWS_API_KEY=your_key_here
-# Get free key at https://newsapi.org (500 req/day)
-
-# Terminal 1 — API server
-python -m uvicorn main:app --reload --port 8000
-
-# Terminal 2 — Auto data scheduler (run alongside the server)
-python scheduler.py
+copy .env.example .env
+# Edit .env with your API keys
+python -m uvicorn main:app --port 8000
 ```
 
-Backend runs at: http://localhost:8000
-API docs at: http://localhost:8000/docs
-
-### How the scheduler works
-
-The scheduler runs as a separate background process and keeps data fresh automatically:
-
-| Time (IST)     | What it does                                      |
-|----------------|---------------------------------------------------|
-| 9:00 AM        | Fetches indices + global news (pre-market)        |
-| 9:15 AM        | Full stock fetch — all 25 Nifty stocks with signals |
-| Every 15 mins  | Intraday refresh during market hours only         |
-| 3:35 PM        | End-of-day snapshot, saves signal history         |
-| 6:00 PM        | Post-market news refresh                          |
-| Weekends/holidays | Skips automatically                            |
-
-Data is saved to `backend/data/` as JSON files:
-- `stocks_latest.json` — latest signals for all stocks
-- `indices_latest.json` — Nifty, BankNifty, Sensex, VIX
-- `news_latest.json` — latest market news articles
-- `signal_history.json` — 90-day rolling signal log (for backtesting)
-
-The API always serves from these files first (fast), and falls back to live fetch only if files are missing.
-
-### Step 2 — Frontend
+### Step 3 — Frontend
 
 ```bash
 cd frontend
-npm install
+npm install --legacy-peer-deps
+# Create frontend/.env.local with:
+# VITE_API_URL=http://localhost:8000/api
 npm start
 ```
 
-Frontend runs at: http://localhost:3000
-
 ---
 
-## API endpoints
+## API keys needed
 
-| Endpoint | Description |
-|---|---|
-| GET /api/health | Server status |
-| GET /api/market/overview | Nifty50, BankNifty, Sensex, Midcap |
-| GET /api/stocks?sector=Banking | All stocks with AI signals |
-| GET /api/stock/{symbol} | Full detail: technicals + fundamentals + chart |
-| GET /api/options/{symbol}?expiry=date | Live options chain |
-| GET /api/chart/{symbol}?period=3mo | OHLCV chart data |
-| GET /api/news?symbol=TCS | News with sentiment scores |
+### NewsAPI (optional)
+- Free at https://newsapi.org
+- 500 req/day free plan
+- Add as `NEWS_API_KEY` in `.env`
+
+### Zerodha Kite (optional)
+- Go to https://developers.kite.trade
+- Create app — Personal plan (free)
+- Add `ZERODHA_API_KEY` and `ZERODHA_API_SECRET` to `.env`
 
 ---
 
 ## Signal methodology
 
-For each stock the engine computes a score from -6 to +6:
-
-| Indicator | Bullish | Bearish |
+| Indicator | Bullish | Points |
 |---|---|---|
-| RSI < 35 | +2.0 | — |
-| RSI > 65 | — | -2.0 |
-| MACD histogram > 0 | +1.5 | -1.5 |
-| Price > EMA20 by 2%+ | +1.0 | -1.0 |
-| News sentiment > 70% | +1.5 | -1.5 |
+| RSI < 35 | Oversold | +2.0 |
+| RSI < 45 | Slightly oversold | +1.0 |
+| RSI > 65 | Overbought | -2.0 |
+| MACD histogram > 0 | Bullish crossover | +1.5 |
+| Price > EMA20 by 2%+ | Above trend | +1.0 |
+| News sentiment > 70% | Positive news | +1.5 |
 
-Score ≥ 2 → BUY · Score ≤ -2 → SELL · else HOLD
+Score ≥ 2 → BUY · Score ≤ -2 → SELL · else → HOLD
 
 ---
 
-## Upgrade path
+## Deployment
 
-### Add FinBERT (better sentiment)
+### Backend — Railway
 ```bash
-pip install transformers torch
-```
-In main.py, replace `score_sentiment()` with:
-```python
-from transformers import pipeline
-finbert = pipeline("text-classification", model="ProsusAI/finbert")
-
-def score_sentiment(text):
-    result = finbert(text[:512])[0]
-    if result["label"] == "positive": return result["score"]
-    if result["label"] == "negative": return 1 - result["score"]
-    return 0.5
+npm install -g @railway/cli
+railway login
+cd backend
+railway init
+railway up
 ```
 
-### Add database (PostgreSQL)
-```bash
-pip install sqlalchemy asyncpg
-```
-Store signal history for backtesting and broker audit logs.
+Add in Railway dashboard Variables:
+- `ZERODHA_API_KEY`
+- `ZERODHA_API_SECRET`
+- `NEWS_API_KEY`
 
-### White-label for brokers
-1. In `frontend/src/App.js`, change `NiftySignal AI` to broker name
-2. Change `#6c63ff` (purple) to broker brand color
-3. Add broker logo in `frontend/public/`
-4. Deploy backend on AWS/GCP, frontend on Vercel
-5. Add JWT auth middleware in `main.py` for API key per broker
+### Frontend — Vercel
+1. Import repo on vercel.com
+2. Root Directory: `frontend`
+3. Environment variable: `VITE_API_URL=https://your-railway-url.up.railway.app/api`
+4. Build command: `npm install --legacy-peer-deps && node ./node_modules/vite/bin/vite.js build`
+
+---
+
+## Data freshness
+
+| Source | Delay |
+|---|---|
+| yfinance (default) | ~15 min |
+| Zerodha Personal | ~1 min |
+| Zerodha Connect | Real-time (₹2,000/month) |
 
 ---
 
 ## Disclaimer
 
-This software is for educational and research purposes only.
-Not SEBI-registered investment advice.
-Past performance does not guarantee future results.
-Always consult a qualified SEBI-registered financial advisor before trading.
+Educational and research purposes only. Not SEBI-registered investment advice. Consult a qualified financial advisor before trading.
+
+---
+
+## License
+
+MIT
