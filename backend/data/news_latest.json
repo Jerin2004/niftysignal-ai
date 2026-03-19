@@ -1,4 +1,245 @@
 {
-  "articles": [],
-  "fetched_at": "2026-03-18T18:00:16.551025+05:30"
+  "articles": [
+    {
+      "title": "Share Market Highlights: Sensex jumps 568 points, Nifty nears 23,600 in strong close",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/stock-market-highlights-march-17-2026/article70749721.ece",
+      "published": "2026-03-17T10:32:26Z",
+      "sentiment": 1.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Sensex, Nifty slip in early trade as IT stocks drag; crude oil surge adds to pressure",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/stock-markets/sensex-nifty-slip-in-early-trade-as-it-stocks-drag-crude-oil-surge-adds-to-pressure/article70752510.ece",
+      "published": "2026-03-17T04:21:15Z",
+      "sentiment": 1.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Stock Market Live Updates: Stock to buy today: Adani Power (\u20b9154.10) \u2013 BUY",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/stock-market-live-updates-march-17-2026/article70749721.ece",
+      "published": "2026-03-17T01:19:34Z",
+      "sentiment": 1.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Markets swing as Citi, Nomura trim Nifty 50 targets amid West Asia conflict; UltraTech, Grasim, HDFC Bank & Hindalco lead Nifty 50 gainers",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/sensex-nifty-swing-as-citi-nomura-trim-nifty-50-targets-amid-west-asia-conflict-ultratech-grasim-hdfc-bank-amp-hindalco-lead-nifty-50-gainers/article70749110.ece",
+      "published": "2026-03-16T07:55:58Z",
+      "sentiment": 0.5,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "BSE, NSE organise mock trading session today: Check timing, purpose, other details",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/bse-nse-organise-mock-trading-session-today-check-timing-purpose-other-details/articleshow/129570264.cms",
+      "published": "2026-03-14T06:52:50Z",
+      "sentiment": 0.5,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "LPG Gas Crisis Highlights: Indian OMCs face mounting LPG losses as spot cargo costs soar",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/commodities/lpg-shortage-lpg-gas-cylinder-crisis-highlights-13-mar-2026/article70737951.ece",
+      "published": "2026-03-13T15:46:36Z",
+      "sentiment": 0.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "For stock hunters: In Rs 10 lakh crore Friday market crash, 50 stocks rally against Iran war sell-off",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/for-stock-hunters-in-rs-10-lakh-crore-friday-market-crash-50-stocks-rally-against-iran-war-sell-off/articleshow/129546181.cms",
+      "published": "2026-03-13T09:01:44Z",
+      "sentiment": 0.67,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Stock Market Highlights: Sensex plunges 1.08% to 76,034, Nifty50 drops 0.95% to 23,639: Autos, FMCG lead losses",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/share-market-nifty-sensex-highlights-12th-march-2026/article70730790.ece",
+      "published": "2026-03-12T11:07:24Z",
+      "sentiment": 0.33,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Middle East tensions, oil jitters cloud cautious market open; Tata Steel, Reliance lead gains",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/stock-markets/middle-east-tensions-oil-jitters-cloud-cautious-market-open-tata-steel-reliance-lead-gains/article70729498.ece",
+      "published": "2026-03-11T04:18:20Z",
+      "sentiment": 0.25,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Valuations moderate after market fall, but India\u2019s premium limits FII comeback",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/valuations-moderate-after-market-fall-but-indias-premium-limits-fii-comeback/articleshow/129427252.cms",
+      "published": "2026-03-11T00:00:18Z",
+      "sentiment": 0.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Dalal Street sinks to 10-month low amid panic selling as crude crosses $100",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/dalal-street-sinks-to-10-month-low-amid-panic-selling-as-crude-crosses-100/articleshow/129365630.cms",
+      "published": "2026-03-10T01:02:19Z",
+      "sentiment": 0.5,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "SBI shareholders lose Rs 62,350 crore as stock falls nearly 6% in market sell-off",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/sbi-shareholders-lose-rs-62350-crore-as-stock-falls-nearly-6-in-market-sell-off/articleshow/129312256.cms",
+      "published": "2026-03-09T05:20:24Z",
+      "sentiment": 0.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Stock Market Crash: Rs 12 lakh crore wiped out! Sensex plunges over 2,400 points, Nifty below 23,800: 7 factors behind today's bloodbath",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/rs-12-lakh-crore-wiped-out-sensex-crashes-over-2400-points-nifty-below-23800-factors-behind-market-decline/articleshow/129308266.cms",
+      "published": "2026-03-09T04:02:32Z",
+      "sentiment": 0.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Stock Market Live Updates: Stock to buy today: Kirloskar Brothers (\u20b91,639.75)",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/share-market-nifty-sensex-live-updates-9th-march-2026/article70718605.ece",
+      "published": "2026-03-09T01:35:19Z",
+      "sentiment": 1.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Oil marketing companies, paint stocks decline amid surging crude oil prices",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/oil-marketing-companies-paint-stocks-decline-amid-surging-crude-oil-prices/articleshow/129157328.cms",
+      "published": "2026-03-06T13:18:24Z",
+      "sentiment": 0.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Stock Market Live Updates: Stock to buy today: Tube Investments of India (\u20b92,769.20)",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/share-market-nifty-sensex-live-updates-5th-march-2026/article70703409.ece",
+      "published": "2026-03-05T01:19:17Z",
+      "sentiment": 1.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Tata Steel, Vedanta, Hindustan Copper fall up to 8% as Iran-Israel war hits metals' prospects",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/tata-steel-vedanta-hindustan-copper-fall-up-to-8-as-iran-israel-war-hits-metals-prospects/articleshow/129018870.cms",
+      "published": "2026-03-04T09:41:20Z",
+      "sentiment": 0.25,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Sensex crashes over 1,795 points today as metal, realty, PSU banks drag",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/stock-markets/sensex-crashes-over-1795-points-today-as-metal-realty-psu-banks-drag/article70702583.ece",
+      "published": "2026-03-04T07:42:21Z",
+      "sentiment": 0.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "War concerns, surging crude prices: Why stock markets are nosediving again",
+      "source": "The Indian Express",
+      "url": "https://indianexpress.com/article/explained/explained-economics/war-concerns-surging-crude-prices-why-stock-markets-are-nosediving-again-10564297/",
+      "published": "2026-03-04T06:09:19Z",
+      "sentiment": 0.5,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Sensex tanks over 2% on opening amid West Asia tensions",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/sensex-tanks-over-2-on-opening-amid-west-asia-tensions/article70702042.ece",
+      "published": "2026-03-04T04:20:11Z",
+      "sentiment": 1.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Stock market holiday: Are BSE, NSE open or closed on Wednesday for Holi?",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/stock-market-holiday-are-bse-nse-open-or-closed-on-wednesday-for-holi/articleshow/128960770.cms",
+      "published": "2026-03-03T06:44:07Z",
+      "sentiment": 0.5,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "NSE, BSE shut today for Holi, global indices under pressure amid rising tensions",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/nse-bse-shut-today-for-holi-global-indices-under-pressure-amid-rising-tensions/article70697908.ece",
+      "published": "2026-03-03T04:16:14Z",
+      "sentiment": 0.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Holi: NSE, BSE shut on Tuesday, MCX to resume evening session, Asian markets under pressure",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/holi-nse-bse-shut-on-tuesday-mcx-to-resume-evening-session-asian-markets-under-pressure/article70697830.ece",
+      "published": "2026-03-03T03:30:06Z",
+      "sentiment": 0.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Stock market holiday today for Holi 2026: Are NSE BSE open or closed on March 3 for Holi celebration? Check now",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/stock-market-holiday-today-for-holi-2026-are-nse-bse-open-or-closed-on-march-3-for-holi-celebration-check-now/articleshow/128952114.cms",
+      "published": "2026-03-03T01:30:00Z",
+      "sentiment": 0.5,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Shares of aviation firms, tour operators dive amid Middle East crisis",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/shares-of-aviation-firms-tour-operators-dive-amid-middle-east-crisis/article70694009.ece",
+      "published": "2026-03-02T05:32:35Z",
+      "sentiment": 0.5,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Gaudium IVF shares jump 5% in stock market debut",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/stock-markets/gaudium-ivf-shares-jump-5-in-stock-market-debut/article70682815.ece",
+      "published": "2026-02-27T05:54:37Z",
+      "sentiment": 1.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Vishal Mega Mart shares in focus as promoter likely sells 6.5% stake via block deal: Report",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/vishal-mega-mart-shares-in-focus-as-promoter-likely-sells-6-5-stake-via-block-deal-report/articleshow/128835728.cms",
+      "published": "2026-02-27T03:16:17Z",
+      "sentiment": 0.83,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Stock Market Live: Stock to buy today: Sammaan Capital",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/share-market-nifty-sensex-live-updates-26th-february-2026/article70676467.ece",
+      "published": "2026-02-26T01:22:03Z",
+      "sentiment": 1.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Markets tumble with IT shares hit by renewed anxiety over AI impact",
+      "source": "The Times of India",
+      "url": "https://economictimes.indiatimes.com/markets/stocks/news/markets-tumble-with-it-shares-hit-by-renewed-anxiety-over-ai-impact/articleshow/128766987.cms",
+      "published": "2026-02-25T01:09:04Z",
+      "sentiment": 0.0,
+      "symbol": "MARKET"
+    },
+    {
+      "title": "Stock Market Live 20 February: Stock to buy today: HFCL (\u20b971.45)",
+      "source": "BusinessLine",
+      "url": "https://www.thehindubusinessline.com/markets/share-market-nifty-sensex-live-updates-20th-february-2026/article70651611.ece",
+      "published": "2026-02-20T01:41:19Z",
+      "sentiment": 1.0,
+      "symbol": "MARKET"
+    }
+  ],
+  "fetched_at": "2026-03-19T05:39:59.345043+05:30"
 }
