@@ -4,55 +4,174 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const API = 'http://localhost:8000/api';
 
+// ── Global styles injected into document ─────────────────────────────────────
+const globalCSS = `
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #080b0f; color: #c9d1d9; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #0d1117; }
+  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes flash { 0%{background:#1a3a2a} 100%{background:transparent} }
+  .row-flash { animation: flash 1s ease-out; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+`;
+if (!document.getElementById('ns-styles')) {
+  const s = document.createElement('style');
+  s.id = 'ns-styles';
+  s.textContent = globalCSS;
+  document.head.appendChild(s);
+}
+
+const T = {
+  bg:      '#080b0f',
+  bgCard:  '#0d1117',
+  bgHover: '#161b22',
+  bgInput: '#161b22',
+  border:  '#21262d',
+  border2: '#30363d',
+  text:    '#e6edf3',
+  text2:   '#8b949e',
+  text3:   '#484f58',
+  green:   '#3fb950',
+  greenBg: '#0d2b1a',
+  greenBd: '#1a4a2e',
+  red:     '#f85149',
+  redBg:   '#2b0d0d',
+  redBd:   '#4a1a1a',
+  amber:   '#d29922',
+  amberBg: '#2b2000',
+  blue:    '#58a6ff',
+  blueBg:  '#0d2240',
+  purple:  '#a371f7',
+  accent:  '#238636',
+};
+
 const S = {
-  app: { minHeight:'100vh', background:'#0f0f13', color:'#e2e2e8', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' },
-  nav: { background:'#16161e', borderBottom:'1px solid #2a2a38', padding:'0 24px', display:'flex', alignItems:'center', height:56, gap:28, position:'sticky', top:0, zIndex:100 },
-  logo: { fontSize:18, fontWeight:700, color:'#fff' },
-  logoAccent: { color:'#6c63ff' },
-  navBtn: (a) => ({ padding:'20px 0 18px', fontSize:13, fontWeight:500, color:a?'#fff':'#888', cursor:'pointer', border:'none', background:'none', borderBottom:a?'2px solid #6c63ff':'2px solid transparent' }),
-  main: { padding:'20px 24px', maxWidth:1400, margin:'0 auto' },
-  grid4: { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 },
-  metric: { background:'#16161e', border:'1px solid #2a2a38', borderRadius:12, padding:16 },
-  mLabel: { fontSize:11, color:'#888', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:6 },
-  mVal: { fontSize:24, fontWeight:700, color:'#fff' },
-  mSub: { fontSize:12, marginTop:4 },
-  card: { background:'#16161e', border:'1px solid #2a2a38', borderRadius:12, padding:16, marginBottom:14 },
-  secTitle: { fontSize:11, fontWeight:600, color:'#666', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:14 },
-  tHead: { display:'grid', gridTemplateColumns:'80px 1fr 75px 75px 55px 95px 100px', gap:8, padding:'8px 12px', fontSize:11, color:'#555', fontWeight:600, textTransform:'uppercase', borderBottom:'1px solid #2a2a38' },
-  tRow: { display:'grid', gridTemplateColumns:'80px 1fr 75px 75px 55px 95px 100px', gap:8, padding:'10px 12px', fontSize:13, borderBottom:'1px solid #1a1a24', cursor:'pointer', alignItems:'center' },
-  btn: { background:'#6c63ff', color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' },
-  btnSm: { background:'transparent', color:'#888', border:'1px solid #2a2a38', borderRadius:8, padding:'5px 12px', fontSize:12, cursor:'pointer' },
-  input: { background:'#1e1e28', border:'1px solid #2a2a38', borderRadius:8, padding:'7px 12px', fontSize:13, color:'#e2e2e8' },
-  select: { background:'#1e1e28', border:'1px solid #2a2a38', borderRadius:8, padding:'7px 12px', fontSize:13, color:'#e2e2e8' },
+  app: { minHeight:'100vh', background:T.bg, color:T.text, fontFamily:"'Inter',sans-serif" },
+  nav: {
+    background:'rgba(13,17,23,0.95)', backdropFilter:'blur(12px)',
+    borderBottom:`1px solid ${T.border}`, padding:'0 24px',
+    display:'flex', alignItems:'center', height:52, gap:0,
+    position:'sticky', top:0, zIndex:100,
+  },
+  logo: { fontSize:15, fontWeight:600, color:T.text, letterSpacing:'-0.3px', marginRight:32, display:'flex', alignItems:'center', gap:8 },
+  logoDot: { width:8, height:8, borderRadius:'50%', background:T.green, animation:'pulse 2s infinite' },
+  navBtn: (a) => ({
+    padding:'0 16px', height:52, fontSize:13, fontWeight:a?500:400,
+    color:a?T.text:T.text2, cursor:'pointer', border:'none', background:'none',
+    borderBottom:a?`2px solid ${T.green}`:'2px solid transparent',
+    transition:'all .15s', whiteSpace:'nowrap',
+  }),
+  main: { padding:'16px 24px', maxWidth:1600, margin:'0 auto' },
+  grid4: { display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:16 },
+  metric: {
+    background:T.bgCard, border:`1px solid ${T.border}`,
+    borderRadius:8, padding:'12px 16px', position:'relative', overflow:'hidden',
+  },
+  metricAccent: { position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, ${T.green}, transparent)` },
+  mLabel: { fontSize:10, color:T.text3, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:6, fontWeight:500 },
+  mVal: { fontSize:22, fontWeight:600, color:T.text, fontFamily:"'JetBrains Mono',monospace", letterSpacing:'-0.5px' },
+  mSub: { fontSize:11, marginTop:4, fontFamily:"'JetBrains Mono',monospace" },
+  card: { background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:8, padding:16, marginBottom:12 },
+  secTitle: { fontSize:10, fontWeight:600, color:T.text3, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:12 },
+  tHead: {
+    display:'grid', gridTemplateColumns:'76px 1fr 82px 82px 52px 100px 108px',
+    gap:8, padding:'6px 12px', fontSize:10, color:T.text3,
+    fontWeight:600, textTransform:'uppercase', letterSpacing:'.06em',
+    borderBottom:`1px solid ${T.border}`, background:'rgba(22,27,34,0.5)',
+  },
+  tRow: {
+    display:'grid', gridTemplateColumns:'76px 1fr 82px 82px 52px 100px 108px',
+    gap:8, padding:'9px 12px', fontSize:12, borderBottom:`1px solid rgba(33,38,45,0.5)`,
+    cursor:'pointer', alignItems:'center', transition:'background .1s',
+  },
+  btn: {
+    background:T.accent, color:'#fff', border:`1px solid ${T.green}`,
+    borderRadius:6, padding:'7px 16px', fontSize:12, fontWeight:500, cursor:'pointer',
+    transition:'all .15s',
+  },
+  btnSm: {
+    background:'transparent', color:T.text2, border:`1px solid ${T.border2}`,
+    borderRadius:6, padding:'4px 10px', fontSize:11, cursor:'pointer', transition:'all .15s',
+  },
+  btnOutline: {
+    background:'transparent', color:T.text2, border:`1px solid ${T.border}`,
+    borderRadius:6, padding:'6px 14px', fontSize:12, cursor:'pointer',
+  },
+  input: {
+    background:T.bgInput, border:`1px solid ${T.border2}`, borderRadius:6,
+    padding:'6px 10px', fontSize:12, color:T.text, outline:'none',
+    fontFamily:"'Inter',sans-serif",
+  },
+  select: {
+    background:T.bgInput, border:`1px solid ${T.border2}`, borderRadius:6,
+    padding:'6px 10px', fontSize:12, color:T.text, outline:'none',
+    fontFamily:"'Inter',sans-serif",
+  },
 };
 
 const pill = (type) => {
-  const m = { BUY:['#0d2b1a','#22c55e'], SELL:['#2b0d0d','#ef4444'], HOLD:['#2b2509','#f59e0b'], CALL:['#0c2240','#60a5fa'], PUT:['#2b0d1a','#f472b6'], NEUTRAL:['#1e1e28','#666'], OPEN:['#0c2240','#60a5fa'], 'TARGET HIT':['#0d2b1a','#22c55e'], 'STOPPED OUT':['#2b0d0d','#ef4444'], CLOSED:['#1e1e28','#888'] };
-  const [bg,color] = m[type] || m.NEUTRAL;
-  return <span style={{background:bg,color,fontSize:11,fontWeight:600,padding:'2px 9px',borderRadius:20,display:'inline-block'}}>{type}</span>;
+  const m = {
+    BUY:[T.greenBg,T.green,T.greenBd], SELL:[T.redBg,T.red,T.redBd],
+    HOLD:[T.amberBg,T.amber,'#3d2e00'], CALL:[T.blueBg,T.blue,'#1a3a5c'],
+    PUT:[T.redBg,'#f472b6',T.redBd], NEUTRAL:['#161b22',T.text3,T.border],
+    OPEN:[T.blueBg,T.blue,'#1a3a5c'], CLOSED:['#161b22',T.text3,T.border],
+  };
+  const [bg,color,bd] = m[type] || m.NEUTRAL;
+  return <span style={{background:bg,color,border:`1px solid ${bd}`,fontSize:10,fontWeight:600,padding:'2px 8px',borderRadius:4,display:'inline-block',letterSpacing:'.04em'}}>{type}</span>;
 };
 
 const fmt = (v,d=2) => v!=null?(+v).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
 const fmtPct = (v) => v!=null?`${v>=0?'+':''}${(+v).toFixed(2)}%`:'—';
-const cc = (v) => v>=0?'#22c55e':'#ef4444';
-const Spinner = () => <div style={{textAlign:'center',padding:40,color:'#555'}}>Loading...</div>;
+const cc = (v) => v>=0?T.green:T.red;
+const Spinner = () => (
+  <div style={{textAlign:'center',padding:40,color:T.text3,fontSize:13}}>
+    <div style={{width:20,height:20,border:`2px solid ${T.border2}`,borderTopColor:T.green,borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto 12px',display:'block'}}/>
+    Loading...
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  </div>
+);
 const SentBar = ({val}) => {
-  const c = val>0.65?'#22c55e':val<0.4?'#ef4444':'#f59e0b';
-  return <div><div style={{fontSize:11,color:'#888',marginBottom:2}}>{Math.round(val*100)}%</div><div style={{height:4,background:'#2a2a38',borderRadius:2,overflow:'hidden'}}><div style={{width:`${Math.round(val*100)}%`,height:'100%',background:c,borderRadius:2}}/></div></div>;
+  const c = val>0.65?T.green:val<0.4?T.red:T.amber;
+  return <div><div style={{fontSize:10,color:T.text3,marginBottom:2,fontFamily:"'JetBrains Mono',monospace"}}>{Math.round(val*100)}%</div><div style={{height:3,background:T.border,borderRadius:2,overflow:'hidden'}}><div style={{width:`${Math.round(val*100)}%`,height:'100%',background:c,borderRadius:2}}/></div></div>;
 };
 
 // ── Market Banner ─────────────────────────────────────────────────────────────
 function MarketBanner({data}) {
-  if(!data) return null;
-  return <div style={S.grid4}>
-    {[['NIFTY50','Nifty 50'],['BANKNIFTY','Bank Nifty'],['SENSEX','Sensex'],['VIX','India VIX']].map(([k,l])=>{
-      const d=data[k]; if(!d) return null;
-      return <div key={k} style={S.metric}>
-        <div style={S.mLabel}>{l}</div>
-        <div style={S.mVal}>{d.value?fmt(d.value,0):'—'}</div>
-        <div style={{...S.mSub,color:cc(d.change_pct)}}>{fmtPct(d.change_pct)} {d.change>=0?'▲':'▼'} {fmt(Math.abs(d.change),0)}</div>
-      </div>;
-    })}
+  const now = new Date();
+  const ist = new Date(now.toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+  const h = ist.getHours(), m = ist.getMinutes();
+  const isOpen = (h>9||(h===9&&m>=15)) && (h<15||(h===15&&m<=30));
+  const timeStr = ist.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  return <div style={{marginBottom:16}}>
+    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:10}}>
+      <div style={{display:'flex',alignItems:'center',gap:6}}>
+        <div style={{width:6,height:6,borderRadius:'50%',background:isOpen?T.green:T.red,animation:isOpen?'pulse 2s infinite':'none'}}/>
+        <span style={{fontSize:11,color:isOpen?T.green:T.red,fontWeight:500}}>{isOpen?'MARKET OPEN':'MARKET CLOSED'}</span>
+      </div>
+      <span style={{fontSize:11,color:T.text3,fontFamily:"'JetBrains Mono',monospace"}}>{timeStr} IST</span>
+      {data?.source&&<span style={{fontSize:10,color:T.text3,marginLeft:'auto',background:T.bgCard,border:`1px solid ${T.border}`,padding:'2px 8px',borderRadius:4}}>{data.source==='scheduler_cache'?'cached':'live'}</span>}
+    </div>
+    <div style={S.grid4}>
+      {[['NIFTY50','Nifty 50'],['BANKNIFTY','Bank Nifty'],['SENSEX','Sensex'],['VIX','India VIX']].map(([k,l])=>{
+        const d=data?.[k]; if(!d) return <div key={k} style={S.metric}><div style={S.mLabel}>{l}</div><div style={{...S.mVal,color:T.text3}}>—</div></div>;
+        const isUp = d.change_pct>=0;
+        return <div key={k} style={{...S.metric,borderColor:isUp?T.greenBd:T.redBd}}>
+          <div style={{...S.metricAccent,background:`linear-gradient(90deg,${isUp?T.green:T.red},transparent)`}}/>
+          <div style={S.mLabel}>{l}</div>
+          <div style={S.mVal}>{d.value?fmt(d.value,0):'—'}</div>
+          <div style={{...S.mSub,color:cc(d.change_pct),display:'flex',gap:6,alignItems:'center'}}>
+            <span>{isUp?'▲':'▼'}</span>
+            <span>{fmtPct(d.change_pct)}</span>
+            <span style={{color:T.text3}}>({fmt(Math.abs(d.change),0)})</span>
+          </div>
+        </div>;
+      })}
+    </div>
   </div>;
 }
 
@@ -144,12 +263,15 @@ function StocksTable({onSelect}) {
     <div style={S.card}>
       <div style={S.tHead}><span>Symbol</span><span>Company</span><span>Price</span><span>Change</span><span>RSI</span><span>Sentiment</span><span>Signal</span></div>
       {loading?<Spinner/>:filtered.map(s=>(
-        <div key={s.sym} style={S.tRow} onMouseEnter={e=>e.currentTarget.style.background='#1e1e2a'} onMouseLeave={e=>e.currentTarget.style.background='transparent'} onClick={()=>onSelect(s.sym)}>
-          <span style={{fontWeight:700,color:'#fff'}}>{s.sym}</span>
-          <span style={{color:'#aaa',fontSize:12}}>{s.name}</span>
-          <span style={{color:'#fff',fontWeight:600}}>₹{fmt(s.price)}</span>
-          <span style={{color:cc(s.change_pct),fontWeight:600}}>{fmtPct(s.change_pct)}</span>
-          <span style={{color:s.rsi>65?'#ef4444':s.rsi<35?'#22c55e':'#888'}}>{s.rsi??'—'}</span>
+        <div key={s.sym} style={S.tRow}
+          onMouseEnter={e=>e.currentTarget.style.background=T.bgHover}
+          onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+          onClick={()=>onSelect(s.sym)}>
+          <span style={{fontWeight:600,color:T.text,fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{s.sym}</span>
+          <span style={{color:T.text2,fontSize:11,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</span>
+          <span style={{color:T.text,fontWeight:500,fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>₹{fmt(s.price)}</span>
+          <span style={{color:cc(s.change_pct),fontWeight:500,fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{fmtPct(s.change_pct)}</span>
+          <span style={{color:s.rsi>65?T.red:s.rsi<35?T.green:T.text3,fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>{s.rsi??'—'}</span>
           <SentBar val={s.sentiment??0.5}/>
           <div style={{display:'flex',gap:4}}>{pill(s.signal)}{pill(s.opt_rec)}</div>
         </div>
@@ -503,17 +625,30 @@ export default function App() {
 
   return <div style={S.app}>
     <nav style={S.nav}>
-      <div style={S.logo}>Nifty<span style={S.logoAccent}>Signal</span> AI</div>
-      {tabs.map(([k,l])=>(
-        <button key={k} style={S.navBtn(tab===k)} onClick={()=>{setTab(k);setSelectedStock(null);}}>{l}</button>
-      ))}
-      <div style={{marginLeft:'auto',fontSize:12,color:apiOk===true?'#22c55e':apiOk===false?'#ef4444':'#888'}}>
-        {apiOk===true?'● Connected':apiOk===false?'● API offline':'● Connecting...'}
+      <div style={S.logo}>
+        <div style={S.logoDot}/>
+        <span>NiftySignal</span>
+        <span style={{color:T.text3,fontWeight:300}}>AI</span>
+      </div>
+      <div style={{display:'flex',height:'100%'}}>
+        {tabs.map(([k,l])=>(
+          <button key={k} style={S.navBtn(tab===k)} onClick={()=>{setTab(k);setSelectedStock(null);}}>{l}</button>
+        ))}
+      </div>
+      <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:12}}>
+        <div style={{display:'flex',alignItems:'center',gap:6,fontSize:11}}>
+          <div style={{width:6,height:6,borderRadius:'50%',background:apiOk===true?T.green:apiOk===false?T.red:T.amber,animation:apiOk===true?'pulse 2s infinite':'none'}}/>
+          <span style={{color:apiOk===true?T.green:apiOk===false?T.red:T.text3}}>
+            {apiOk===true?'API connected':apiOk===false?'API offline':'connecting...'}
+          </span>
+        </div>
       </div>
     </nav>
 
     <div style={S.main}>
-      {apiOk===false&&<div style={{...S.card,borderColor:'#ef4444',background:'#1a0d0d',marginBottom:16}}><div style={{fontSize:13,color:'#ef4444'}}>Backend not running. Run: python -m uvicorn main:app --reload --port 8000</div></div>}
+      {apiOk===false&&<div style={{...S.card,borderColor:T.redBd,background:T.redBg,marginBottom:12}}>
+        <div style={{fontSize:12,color:T.red}}>Backend not running — run: <code style={{fontFamily:"'JetBrains Mono',monospace",background:'rgba(255,255,255,0.05)',padding:'1px 6px',borderRadius:3}}>python -m uvicorn main:app --port 8000</code></div>
+      </div>}
 
       <MarketBanner data={overview}/>
 
