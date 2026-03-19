@@ -1,36 +1,17 @@
 {
   "trades": [
     {
-      "id": "INFY_1773804157",
+      "id": 2,
       "sym": "INFY",
       "signal": "BUY",
       "direction": "LONG",
-      "entry": 1232.9,
-      "stop_loss": 1185.34,
-      "target1": 1296.32,
-      "target2": 1343.88,
-      "qty": 21,
+      "entry": 1267.1,
+      "stop_loss": 1218.48,
+      "target1": 1331.92,
+      "target2": 1380.54,
+      "qty": 20,
       "status": "OPEN",
-      "opened_at": "2026-03-18T08:52:37.201914",
-      "closed_at": null,
-      "exit_price": null,
-      "exit_reason": null,
-      "pnl": null,
-      "pnl_pct": null,
-      "notes": ""
-    },
-    {
-      "id": "INFY_1773804165",
-      "sym": "INFY",
-      "signal": "BUY",
-      "direction": "LONG",
-      "entry": 1232.9,
-      "stop_loss": 1185.34,
-      "target1": 1296.32,
-      "target2": 1343.88,
-      "qty": 21,
-      "status": "OPEN",
-      "opened_at": "2026-03-18T08:52:45.046028",
+      "opened_at": "2026-03-19T05:36:13.262181",
       "closed_at": null,
       "exit_price": null,
       "exit_reason": null,
@@ -39,11 +20,5 @@
       "notes": ""
     }
   ],
-  "summary": {
-    "total": 2,
-    "wins": 0,
-    "losses": 0,
-    "open": 2,
-    "pnl": 0
-  }
+  "next_id": 3
 }

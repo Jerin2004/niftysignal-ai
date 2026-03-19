@@ -65,7 +65,7 @@ function StocksTable({onSelect}) {
   const [search,setSearch] = useState('');
   const [lastSignals,setLastSignals] = useState({});
   const [alerts,setAlerts] = useState([]);
-  const [nextRefresh,setNextRefresh] = useState(120);
+  const [nextRefresh,setNextRefresh] = useState(300);
 
   const loadStocks = (force=false) => {
     const url = force ? `${API}/stocks?force_refresh=true` : `${API}/stocks`;
@@ -97,7 +97,7 @@ function StocksTable({onSelect}) {
     if('Notification' in window) Notification.requestPermission();
     const interval = setInterval(()=>{
       setNextRefresh(n => {
-        if(n <= 1) { loadStocks(); return 120; }
+        if(n <= 1) { loadStocks(); return 300; }
         return n - 1;
       });
     }, 1000);
@@ -240,7 +240,7 @@ function StockDetail({symbol, onBack, onAddTrade}) {
       <button style={{...S.btn,opacity:tradePlan&&tradePlan.stop_loss?1:0.5}} onClick={async()=>{
         if(!tradePlan||!tradePlan.stop_loss){setAddMsg('No trade plan available');return;}
         try{
-          await axios.post(`${API}/paper/open?sym=${symbol}&signal=${tradePlan.signal}&entry=${tradePlan.entry}&stop_loss=${tradePlan.stop_loss}&target1=${tradePlan.target1}&target2=${tradePlan.target2}&qty=${tradePlan.position_sizing?.quantity||1}`);
+          await axios.post(`${API}/paper/trades`,{sym:symbol,signal:tradePlan.signal,entry:tradePlan.entry,stop_loss:tradePlan.stop_loss,target1:tradePlan.target1,target2:tradePlan.target2,qty:tradePlan.position_sizing?.quantity||1,notes:''});
           setAddMsg('✓ Paper trade opened! Check Paper Trading tab');
           setTimeout(()=>setAddMsg(''),4000);
         }catch(e){setAddMsg('Failed — check backend');}
@@ -278,90 +278,110 @@ function StockDetail({symbol, onBack, onAddTrade}) {
 
 // ── Paper Trading ─────────────────────────────────────────────────────────────
 function PaperTrading({prefill, onClear}) {
-  const [trades,setTrades]=useState([]);
-  const [summary,setSummary]=useState({});
-  const [form,setForm]=useState({sym:'',signal:'BUY',entry:'',stop_loss:'',target1:'',target2:'',quantity:1,notes:''});
+  const [stats,setStats]=useState(null);
   const [loading,setLoading]=useState(true);
+  const [closing,setClosing]=useState(null);
+  const [exitPrice,setExitPrice]=useState('');
+  const [msg,setMsg]=useState('');
 
-  useEffect(()=>{
-    if(prefill){
-      setForm({sym:prefill.sym,signal:prefill.signal,entry:prefill.entry||'',stop_loss:prefill.stop_loss||'',target1:prefill.target1||'',target2:prefill.target2||'',quantity:1,notes:''});
-    }
-  },[prefill]);
-
-  const loadTrades=useCallback(()=>{
-    axios.get(`${API}/paper/trades`).then(r=>{setTrades(r.data.trades||[]);setSummary(r.data.summary||{});setLoading(false);}).catch(()=>setLoading(false));
+  const loadStats=useCallback(()=>{
+    axios.get(`${API}/paper/stats`).then(r=>{setStats(r.data);setLoading(false);}).catch(()=>setLoading(false));
   },[]);
 
-  useEffect(()=>{loadTrades();},[loadTrades]);
+  useEffect(()=>{loadStats();},[loadStats]);
 
-  const addTrade=()=>{
-    if(!form.sym||!form.entry) return;
-    axios.post(`${API}/paper/add`,{...form,entry:+form.entry,stop_loss:+form.stop_loss,target1:+form.target1,target2:+form.target2,quantity:+form.quantity})
-      .then(()=>{loadTrades();setForm({sym:'',signal:'BUY',entry:'',stop_loss:'',target1:'',target2:'',quantity:1,notes:''});onClear();});
+  const closeTrade=async(id)=>{
+    if(!exitPrice) return;
+    try{
+      await axios.post(`${API}/paper/trades/${id}/close`,{exit_price:parseFloat(exitPrice),notes:'Manual close'});
+      setClosing(null); setExitPrice('');
+      setMsg('Trade closed!'); setTimeout(()=>setMsg(''),3000);
+      loadStats();
+    }catch(e){setMsg('Failed to close trade');}
   };
 
-  const closeTrade=(id,price)=>{
-    const p = prompt(`Exit price for trade ${id}:`, price);
-    if(p) axios.post(`${API}/paper/close/${id}?exit_price=${p}`).then(loadTrades);
+  const deleteTrade=async(id)=>{
+    if(!window.confirm('Delete this trade?')) return;
+    await axios.delete(`${API}/paper/trades/${id}`);
+    loadStats();
   };
 
-  const deleteTrade=(id)=>{ if(window.confirm('Delete this trade?')) axios.delete(`${API}/paper/delete/${id}`).then(loadTrades); };
+  if(loading) return <Spinner/>;
+  const trades = stats?.trades || [];
+  const open = trades.filter(t=>t.status==='OPEN');
+  const closed = trades.filter(t=>t.status==='CLOSED');
 
   return <div>
-    {/* Summary */}
-    <div style={S.grid4}>
-      {[['Total trades',summary.total_trades??0],['Win rate',(summary.win_rate??0)+'%'],['Total P&L','₹'+(summary.total_pnl??0)],['Open trades',summary.open??0]].map(([l,v])=>(
-        <div key={l} style={S.metric}><div style={S.mLabel}>{l}</div><div style={{...S.mVal,color:l==='Total P&L'?cc(summary.total_pnl||0):'#fff'}}>{v}</div></div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:20}}>
+      {[
+        ['Total trades', stats?.total_trades??0, '#fff'],
+        ['Open', stats?.open??0, '#fff'],
+        ['Win rate', (stats?.win_rate??0)+'%', '#22c55e'],
+        ['Total P&L', '₹'+(stats?.total_pnl??0), cc(stats?.total_pnl||0)],
+        ['Expectancy', '₹'+(stats?.expectancy??0), cc(stats?.expectancy||0)],
+      ].map(([l,v,c])=>(
+        <div key={l} style={S.metric}><div style={S.mLabel}>{l}</div><div style={{fontSize:20,fontWeight:700,color:c}}>{v}</div></div>
       ))}
     </div>
 
-    {/* Add trade form */}
-    <div style={S.card}>
-      <div style={{...S.secTitle,marginBottom:14}}>Add paper trade {prefill&&<span style={{color:'#6c63ff',fontWeight:600}}>— pre-filled from {prefill.sym}</span>}</div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:10}}>
-        <div><div style={{fontSize:12,color:'#888',marginBottom:4}}>Symbol</div><input style={{...S.input,width:'100%'}} value={form.sym} onChange={e=>setForm(f=>({...f,sym:e.target.value.toUpperCase()}))}/></div>
-        <div><div style={{fontSize:12,color:'#888',marginBottom:4}}>Signal</div><select style={{...S.select,width:'100%'}} value={form.signal} onChange={e=>setForm(f=>({...f,signal:e.target.value}))}><option>BUY</option><option>SELL</option></select></div>
-        <div><div style={{fontSize:12,color:'#888',marginBottom:4}}>Entry ₹</div><input style={{...S.input,width:'100%'}} type="number" value={form.entry} onChange={e=>setForm(f=>({...f,entry:e.target.value}))}/></div>
-        <div><div style={{fontSize:12,color:'#888',marginBottom:4}}>Quantity</div><input style={{...S.input,width:'100%'}} type="number" value={form.quantity} onChange={e=>setForm(f=>({...f,quantity:e.target.value}))}/></div>
-        <div><div style={{fontSize:12,color:'#888',marginBottom:4}}>Stop loss ₹</div><input style={{...S.input,width:'100%'}} type="number" value={form.stop_loss} onChange={e=>setForm(f=>({...f,stop_loss:e.target.value}))}/></div>
-        <div><div style={{fontSize:12,color:'#888',marginBottom:4}}>Target 1 ₹</div><input style={{...S.input,width:'100%'}} type="number" value={form.target1} onChange={e=>setForm(f=>({...f,target1:e.target.value}))}/></div>
-        <div><div style={{fontSize:12,color:'#888',marginBottom:4}}>Target 2 ₹</div><input style={{...S.input,width:'100%'}} type="number" value={form.target2} onChange={e=>setForm(f=>({...f,target2:e.target.value}))}/></div>
-        <div><div style={{fontSize:12,color:'#888',marginBottom:4}}>Notes</div><input style={{...S.input,width:'100%'}} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}/></div>
-      </div>
-      <button style={S.btn} onClick={addTrade}>Add trade</button>
-    </div>
+    {msg&&<div style={{padding:'10px 14px',borderRadius:8,marginBottom:12,background:'#0d2b1a',color:'#22c55e',fontSize:13}}>{msg}</div>}
 
-    {/* Trades list */}
-    <div style={S.card}>
-      <div style={S.secTitle}>Active & closed trades</div>
-      {loading?<Spinner/>:trades.length===0?<div style={{padding:20,textAlign:'center',color:'#555'}}>No trades yet. Click a stock signal and hit "Add to paper trades".</div>:
-        trades.map(t=>(
-          <div key={t.id} style={{padding:'12px 0',borderBottom:'1px solid #1a1a24'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-              <div style={{display:'flex',gap:10,alignItems:'center'}}>
-                <span style={{fontWeight:700,color:'#fff',fontSize:15}}>{t.sym}</span>
-                {pill(t.signal)}{pill(t.status)}
-                <span style={{fontSize:12,color:'#666'}}>Qty: {t.quantity}</span>
-              </div>
-              <div style={{display:'flex',gap:6}}>
-                {t.status==='OPEN'&&<button style={S.btnSm} onClick={()=>closeTrade(t.id,t.current_price)}>Close</button>}
-                <button style={{...S.btnSm,color:'#ef4444'}} onClick={()=>deleteTrade(t.id)}>✕</button>
-              </div>
+    {open.length>0&&<div style={{...S.card,marginBottom:14}}>
+      <div style={S.secTitle}>Open trades</div>
+      {open.map(t=>(
+        <div key={t.id} style={{padding:'12px 0',borderBottom:'1px solid #1a1a24'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+            <div style={{display:'flex',gap:10,alignItems:'center'}}>
+              <span style={{fontWeight:700,color:'#fff',fontSize:15}}>{t.sym}</span>
+              {pill(t.signal)}
+              <span style={{fontSize:12,color:'#666'}}>Qty: {t.qty} · Entry: ₹{fmt(t.entry)}</span>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8,marginTop:10,fontSize:12}}>
-              {[['Entry','#fff','₹'+fmt(t.entry)],['Current','#aaa','₹'+fmt(t.current_price)],['Stop loss','#ef4444','₹'+fmt(t.stop_loss)],['Target 1','#22c55e','₹'+fmt(t.target1)],['Target 2','#22c55e','₹'+fmt(t.target2)],['P&L',cc(t.pnl||0),(t.pnl>=0?'+':'')+fmt(t.pnl)+' ('+fmtPct(t.pnl_pct)+')']].map(([l,c,v])=>(
-                <div key={l} style={{background:'#1e1e28',borderRadius:6,padding:'6px 10px'}}>
-                  <div style={{color:'#555',marginBottom:2}}>{l}</div>
-                  <div style={{fontWeight:600,color:c}}>{v}</div>
-                </div>
-              ))}
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              {closing===t.id?(
+                <>
+                  <input style={{...S.input,width:100,padding:'4px 8px'}} placeholder="Exit ₹" value={exitPrice} onChange={e=>setExitPrice(e.target.value)}/>
+                  <button style={{...S.btn,padding:'5px 12px',fontSize:12}} onClick={()=>closeTrade(t.id)}>Confirm</button>
+                  <button style={S.btnSm} onClick={()=>setClosing(null)}>Cancel</button>
+                </>
+              ):(
+                <>
+                  <button style={S.btnSm} onClick={()=>setClosing(t.id)}>Close trade</button>
+                  <button style={{...S.btnSm,color:'#ef4444'}} onClick={()=>deleteTrade(t.id)}>Delete</button>
+                </>
+              )}
             </div>
-            {t.notes&&<div style={{fontSize:12,color:'#555',marginTop:6}}>Notes: {t.notes}</div>}
           </div>
-        ))
-      }
-    </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,fontSize:12}}>
+            {[['Stop loss','#ef4444','₹'+fmt(t.stop_loss)],['Target 1','#22c55e','₹'+fmt(t.target1)],['Target 2','#22c55e','₹'+fmt(t.target2)],['Opened','#888',new Date(t.opened_at).toLocaleDateString('en-IN')]].map(([l,c,v])=>(
+              <div key={l} style={{background:'#1e1e28',borderRadius:6,padding:'6px 10px'}}>
+                <div style={{color:'#555',marginBottom:2}}>{l}</div>
+                <div style={{fontWeight:600,color:c}}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>}
+
+    {closed.length>0&&<div style={S.card}>
+      <div style={S.secTitle}>Closed trades</div>
+      {closed.slice().reverse().map(t=>(
+        <div key={t.id} style={{display:'grid',gridTemplateColumns:'70px 80px 80px 80px 80px 80px 1fr',gap:8,padding:'10px 0',borderBottom:'1px solid #1a1a24',fontSize:13,alignItems:'center'}}>
+          <span style={{fontWeight:700,color:'#fff'}}>{t.sym}</span>
+          {pill(t.signal)}
+          <span style={{color:'#888'}}>₹{fmt(t.entry)}</span>
+          <span style={{color:'#aaa'}}>→ ₹{fmt(t.exit_price)}</span>
+          <span style={{color:cc(t.pnl||0),fontWeight:700}}>{t.pnl>=0?'+':''}₹{fmt(t.pnl)}</span>
+          <span style={{color:cc(t.pnl_pct||0)}}>{t.pnl_pct>=0?'+':''}{fmt(t.pnl_pct)}%</span>
+          <span style={{fontSize:11,color:'#555'}}>{new Date(t.opened_at).toLocaleDateString('en-IN')}</span>
+        </div>
+      ))}
+    </div>}
+
+    {trades.length===0&&<div style={{...S.card,textAlign:'center',padding:40}}>
+      <div style={{fontSize:14,color:'#888',marginBottom:8}}>No paper trades yet</div>
+      <div style={{fontSize:13,color:'#555'}}>Go to Equity Signals, click a BUY stock, and click "+ Add to paper trades"</div>
+    </div>}
   </div>;
 }
 

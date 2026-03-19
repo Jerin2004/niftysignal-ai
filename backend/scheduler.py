@@ -359,7 +359,7 @@ def setup_schedule():
     schedule.every().day.at("09:00").do(job_fetch_indices)
     schedule.every().day.at("09:00").do(job_fetch_news)
     schedule.every().day.at("09:15").do(job_fetch_all_stocks)
-    schedule.every(15).minutes.do(job_intraday)
+    schedule.every(5).minutes.do(job_intraday)
     schedule.every().day.at("15:35").do(job_eod)
     schedule.every().day.at("18:00").do(job_fetch_news)
 

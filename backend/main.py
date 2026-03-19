@@ -446,22 +446,96 @@ def get_trade_plan(symbol: str, capital: float = Query(100000)):
     except HTTPException: raise
     except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
+from paper_trading import add_trade, close_trade, get_stats, delete_trade, load_trades
+from pydantic import BaseModel
+
+class AddTradeIn(BaseModel):
+    sym: str
+    signal: str
+    entry: float
+    stop_loss: float
+    target1: float
+    target2: float
+    qty: int
+    notes: str = ""
+
+class CloseTradeIn(BaseModel):
+    exit_price: float
+    notes: str = "manual"
+
 @app.get("/api/paper/trades")
-def get_trades():
-    return load_paper_trades()
+def get_paper_trades():
+    return load_trades()
 
 @app.get("/api/paper/stats")
 def paper_stats():
-    return get_paper_summary()
+    return get_stats()
 
-@app.post("/api/paper/open")
-def paper_open(sym: str=Query(...), signal: str=Query(...), entry: float=Query(...),
-               stop_loss: float=Query(...), target1: float=Query(...),
-               target2: float=Query(...), qty: int=Query(...), notes: str=Query("")):
-    trade = open_paper_trade(sym, signal, entry, stop_loss, target1, target2, qty, notes)
+@app.post("/api/paper/trades")
+def create_paper_trade(t: AddTradeIn):
+    trade = add_trade(t.sym, t.signal, t.entry, t.stop_loss, t.target1, t.target2, t.qty, t.notes)
     return {"status": "opened", "trade": trade}
 
-@app.post("/api/paper/close")
-def paper_close(trade_id: str=Query(...), exit_price: float=Query(...), reason: str=Query("manual")):
-    data = close_paper_trade(trade_id, exit_price, reason)
-    return {"status": "closed", "summary": data["summary"]}
+@app.post("/api/paper/trades/{trade_id}/close")
+def close_paper_trade_endpoint(trade_id: int, body: CloseTradeIn):
+    data = close_trade(trade_id, body.exit_price, body.notes)
+    return {"status": "closed", "stats": get_stats()}
+
+@app.delete("/api/paper/trades/{trade_id}")
+def delete_paper_trade(trade_id: int):
+    deleted = delete_trade(trade_id)
+    return {"status": "deleted" if deleted else "not found"}
+
+
+# ── Zerodha Integration ───────────────────────────────────────────────────────
+from zerodha import (
+    get_login_url, complete_login, init_kite,
+    get_quotes, get_indices as z_get_indices,
+    get_all_nse_symbols, is_logged_in
+)
+
+@app.get("/api/zerodha/login-url")
+def zerodha_login_url():
+    url = get_login_url()
+    if not url:
+        raise HTTPException(status_code=400, detail="Zerodha API key not configured in .env")
+    return {"login_url": url, "instructions": "Open this URL in browser, login with Zerodha, then paste the request_token here"}
+
+@app.get("/auth/callback")
+def zerodha_callback(request_token: str = Query(...), action: str = Query("login"), status: str = Query("success")):
+    try:
+        token = complete_login(request_token)
+        return {"status": "success", "message": "Zerodha login successful! You can close this tab.", "token_saved": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/zerodha/status")
+def zerodha_status():
+    logged_in = is_logged_in()
+    if logged_in:
+        init_kite()
+    return {
+        "logged_in": logged_in,
+        "api_key_configured": bool(os.getenv("ZERODHA_API_KEY")),
+        "message": "Connected — live data active" if logged_in else "Not logged in — open /api/zerodha/login-url to connect"
+    }
+
+@app.get("/api/zerodha/quotes")
+def zerodha_quotes(symbols: str = Query(...)):
+    sym_list = [f"NSE:{s.strip().upper()}" for s in symbols.split(",")]
+    quotes = get_quotes(sym_list)
+    if not quotes:
+        raise HTTPException(status_code=401, detail="Not logged in to Zerodha or session expired")
+    return quotes
+
+@app.get("/api/zerodha/indices")
+def zerodha_indices():
+    data = z_get_indices()
+    if not data:
+        raise HTTPException(status_code=401, detail="Not logged in to Zerodha")
+    return data
+
+@app.get("/api/zerodha/all-symbols")
+def zerodha_all_symbols():
+    symbols = get_all_nse_symbols()
+    return {"count": len(symbols), "symbols": symbols[:100], "saved_to": "data/nse_symbols.json"}
