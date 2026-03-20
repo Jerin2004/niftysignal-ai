@@ -8,7 +8,10 @@ import os, json, time, logging
 from pathlib import Path
 from datetime import datetime, date
 from dotenv import load_dotenv
-from kiteconnect import KiteConnect
+try:
+    from kiteconnect import KiteConnect
+except ImportError:
+    KiteConnect = None
 
 load_dotenv()
 
@@ -20,7 +23,7 @@ TOKEN_FILE = Path("data/zerodha_token.json")
 DATA_DIR   = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 
-kite = KiteConnect(api_key=API_KEY) if API_KEY else None
+kite = KiteConnect(api_key=API_KEY) if (API_KEY and KiteConnect) else None
 
 
 def save_token(access_token: str):
