@@ -114,18 +114,27 @@ def get_historical_data(symbol: str, period="90d") -> pd.DataFrame | None:
     """
     sym_ns = f"{symbol}.NS"
 
+    # Try yfinance first
     hist = fetch_yfinance_history(sym_ns, period)
     if hist is not None:
         log.info(f"{symbol}: got data from yfinance ({len(hist)} rows)")
         return hist
 
+    # Try stooq
     log.info(f"{symbol}: yfinance failed, trying stooq...")
     hist = fetch_stooq_history(symbol)
     if hist is not None:
         log.info(f"{symbol}: got data from stooq ({len(hist)} rows)")
         return hist
 
-    log.warning(f"{symbol}: all data sources failed")
+    # Try Alpha Vantage with demo key (limited but works)
+    log.info(f"{symbol}: stooq failed, trying alpha vantage...")
+    hist = fetch_alpha_vantage(symbol)
+    if hist is not None:
+        log.info(f"{symbol}: got data from alpha vantage ({len(hist)} rows)")
+        return hist
+
+    log.warning(f"{symbol}: all historical data sources failed")
     return None
 
 
@@ -163,10 +172,29 @@ def calc_ema(close: pd.Series, period=20) -> float | None:
 def fetch_stock_full(symbol: str, name: str, sector: str) -> dict:
     """
     Full stock data with signals — works from any IP
-    Tries yfinance first, then stooq as fallback
+    Tries multiple sources with fallbacks
     """
+    # Try to get current price from Indian Stock API first (works from any IP)
+    live = fetch_indian_stock_api(symbol)
+
     hist = get_historical_data(symbol)
     if hist is None:
+        # If no historical data but we have live price, create minimal response
+        if live:
+            return {
+                "sym": symbol, "name": name, "sector": sector,
+                "price": live["price"],
+                "prev_close": live["prev_close"],
+                "change": live["change"],
+                "change_pct": round(live["change_pct"], 2),
+                "volume": round(live["volume"] / 1e5, 1) if live["volume"] else 0,
+                "avg_volume": 0,
+                "rsi": None, "macd_diff": None, "price_vs_ema20": None,
+                "week_high": live["week_high"],
+                "week_low": live["week_low"],
+                "last_updated": datetime.now().isoformat(),
+                "source": "indian_stock_api_only"
+            }
         raise ValueError(f"No data available for {symbol}")
 
     close  = hist["Close"] if "Close" in hist.columns else hist.get("close", pd.Series())
@@ -205,3 +233,60 @@ def fetch_stock_full(symbol: str, name: str, sector: str) -> dict:
         "last_updated": datetime.now().isoformat(),
         "source": "multi_source"
     }
+
+
+def fetch_indian_stock_api(symbol: str) -> dict | None:
+    """
+    Free Indian Stock Market API - works from any IP worldwide
+    Source: https://military-jobye-haiqstudios-14f59639.koyeb.app
+    """
+    try:
+        url = f"https://military-jobye-haiqstudios-14f59639.koyeb.app/stock?symbol={symbol}.NS"
+        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        if r.status_code != 200:
+            return None
+        d = r.json()
+        if d.get("status") != "success":
+            return None
+        info = d.get("info", {})
+        return {
+            "price":      info.get("currentPrice", 0),
+            "change":     info.get("currentPrice", 0) - info.get("previousClose", 0),
+            "change_pct": info.get("regularMarketChangePercent", 0),
+            "prev_close": info.get("previousClose", 0),
+            "volume":     info.get("volume", 0),
+            "week_high":  info.get("fiftyTwoWeekHigh", 0),
+            "week_low":   info.get("fiftyTwoWeekLow", 0),
+            "pe_ratio":   info.get("trailingPE", None),
+            "market_cap": info.get("marketCap", None),
+            "source":     "indian_stock_api"
+        }
+    except Exception as e:
+        log.warning(f"Indian stock API failed for {symbol}: {e}")
+        return None
+
+
+def fetch_alpha_vantage(symbol: str, api_key: str = "demo") -> pd.DataFrame | None:
+    """Alpha Vantage - global API that includes Indian stocks"""
+    try:
+        url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=NSE:{symbol}&apikey={api_key}&outputsize=compact"
+        r = requests.get(url, timeout=10)
+        data = r.json()
+        ts = data.get("Time Series (Daily)", {})
+        if not ts:
+            return None
+        rows = []
+        for date_str, vals in sorted(ts.items())[-90:]:
+            rows.append({
+                "Date": pd.to_datetime(date_str),
+                "Open": float(vals["1. open"]),
+                "High": float(vals["2. high"]),
+                "Low":  float(vals["3. low"]),
+                "Close": float(vals["4. close"]),
+                "Volume": float(vals["5. volume"]),
+            })
+        df = pd.DataFrame(rows).set_index("Date")
+        return df if len(df) >= 10 else None
+    except Exception as e:
+        log.warning(f"Alpha Vantage failed for {symbol}: {e}")
+        return None
