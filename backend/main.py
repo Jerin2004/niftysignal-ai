@@ -37,15 +37,13 @@ def background_scheduler():
     log = logging.getLogger("bg_scheduler")
 
     def run_fetch():
-        if not is_market_hours():
-            return
-        log.info("BG scheduler: fetching stocks...")
+        log.info("BG scheduler: fetching stocks via stooq...")
         stocks = []
         for stock in NIFTY50:
             try:
                 s = fetch_live_stock(stock["sym"], stock["name"], stock["sector"])
                 stocks.append(s)
-                time.sleep(0.2)
+                time.sleep(0.3)
             except Exception as e:
                 stocks.append({"sym": stock["sym"].replace(".NS",""), "name": stock["name"], "sector": stock["sector"], "error": str(e)})
         if stocks:
@@ -54,21 +52,27 @@ def background_scheduler():
             mem_set("stocks_all", stocks)
             log.info(f"BG scheduler: saved {len(stocks)} stocks")
 
-        # Also refresh indices
-        indices = {"NIFTY50":"^NSEI","BANKNIFTY":"^NSEBANK","SENSEX":"^BSESN","NIFTYMIDCAP":"^NSEMDCP50","VIX":"^INDIAVIX"}
+        # Refresh indices via stooq
+        from nse_data import fetch_stooq
+        from io import StringIO
+        stooq_indices = {"NIFTY50":"nifty50.ns","BANKNIFTY":"niftybank.ns","SENSEX":"bse30.in"}
         result = {}
-        for name, ticker in indices.items():
+        for iname, sym in stooq_indices.items():
             try:
-                t = yf.Ticker(ticker)
-                hist = t.history(period="2d")
-                if len(hist) >= 2:
-                    prev = float(hist["Close"].iloc[-2]); curr = float(hist["Close"].iloc[-1])
-                    chg = round(curr-prev,2); chg_pct = round((chg/prev)*100,2)
-                elif len(hist) == 1:
-                    curr = float(hist["Close"].iloc[-1]); chg = chg_pct = 0
-                else: curr = chg = chg_pct = 0
-                result[name] = {"value": round(curr,2), "change": chg, "change_pct": chg_pct, "direction": "up" if chg>=0 else "down"}
-            except: pass
+                url = f"https://stooq.com/q/d/l/?s={sym}&i=d"
+                r = requests.get(url, timeout=10, headers={"User-Agent":"Mozilla/5.0"})
+                if r.status_code == 200 and len(r.text) > 50:
+                    df = pd.read_csv(StringIO(r.text))
+                    if len(df) >= 2:
+                        curr = float(df["Close"].iloc[-1])
+                        prev = float(df["Close"].iloc[-2])
+                        chg = round(curr-prev,2)
+                        chg_pct = round((chg/prev)*100,2)
+                        result[iname] = {"value":round(curr,2),"change":chg,"change_pct":chg_pct,"direction":"up" if chg>=0 else "down"}
+            except Exception as e:
+                log.warning(f"Stooq index {iname} failed: {e}")
+        for k in ["NIFTYMIDCAP","VIX"]:
+            result.setdefault(k, {"value":0,"change":0,"change_pct":0,"direction":"flat"})
         if result:
             result["last_updated"] = datetime.now().isoformat()
             with open(DATA_DIR / "indices_latest.json", "w") as f:
@@ -76,9 +80,11 @@ def background_scheduler():
             mem_set("overview", result)
 
     schedule.every(5).minutes.do(run_fetch)
-    schedule.every().day.at("09:15").do(run_fetch)
 
-    log.info("Background scheduler started — auto-refreshes every 5 min during market hours")
+    log.info("Background scheduler started — auto-refreshes every 5 min")
+    # Wait 30 seconds before first fetch to let server start
+    time.sleep(30)
+    run_fetch()
     while True:
         schedule.run_pending()
         time.sleep(30)
