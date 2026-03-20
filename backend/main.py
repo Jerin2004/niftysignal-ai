@@ -82,8 +82,9 @@ def background_scheduler():
     schedule.every(5).minutes.do(run_fetch)
 
     log.info("Background scheduler started — auto-refreshes every 5 min")
-    # Wait 30 seconds before first fetch to let server start
-    time.sleep(30)
+    # Wait 10 seconds before first fetch to let server start
+    time.sleep(10)
+    log.info("Starting initial data fetch via stooq...")
     run_fetch()
     while True:
         schedule.run_pending()
@@ -368,6 +369,10 @@ def get_all_stocks(sector: Optional[str]=Query(None), force_refresh: bool=False)
             return {"stocks":stocks,"source":"scheduler_cache",
                     "cache_age_mins":round((time.time()-(DATA_DIR/"stocks_latest.json").stat().st_mtime)/60,1)}
     c = mem_get("stocks_all")
+    if c:
+        stocks = [s for s in c if not sector or sector=="all" or s.get("sector","")==sector]
+        return {"stocks":stocks,"source":"memory_cache"}
+    # No cache yet — return loading state with helpful message
     if c and not force_refresh:
         return {"stocks":[s for s in c if not sector or sector=="all" or s.get("sector","")==sector],"source":"memory_cache"}
     stocks = []
