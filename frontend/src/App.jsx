@@ -1,763 +1,398 @@
-import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import axios from 'axios';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const API =
-  import.meta.env.VITE_API_URL ||
-  "https://nifty-ai-production.up.railway.app/api";
+const API = import.meta.env.VITE_API_URL || 'https://nifty-ai-production.up.railway.app/api';
 
-// ── Global styles injected into document ─────────────────────────────────────
-const globalCSS = `
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; background: #080b0f; color: #c9d1d9; }
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: #0d1117; }
-  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes flash { 0%{background:#1a3a2a} 100%{background:transparent} }
-  .row-flash { animation: flash 1s ease-out; }
-  .mono { font-family: 'JetBrains Mono', monospace; }
-`;
-if (!document.getElementById("ns-styles")) {
-  const s = document.createElement("style");
-  s.id = "ns-styles";
-  s.textContent = globalCSS;
-  document.head.appendChild(s);
-}
+// ── Global CSS ────────────────────────────────────────────────────────────────
+const injectCSS = () => {
+  if (document.getElementById('ns-css')) return;
+  const el = document.createElement('style');
+  el.id = 'ns-css';
+  el.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 14px; -webkit-text-size-adjust: 100%; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #0a0a0f; color: #c9d1d9; line-height: 1.5; overflow-x: hidden; }
+    ::-webkit-scrollbar { width: 3px; height: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+    input, select, button, textarea { font-family: inherit; }
+    input:focus, select:focus { outline: none; }
+    a { color: inherit; text-decoration: none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+    .fade-up { animation: fadeUp .2s ease both; }
+    .hover-row:hover { background: rgba(255,255,255,0.03) !important; }
+    .hover-btn:hover { opacity: 0.85; }
+    @media (max-width: 768px) {
+      html { font-size: 13px; }
+    }
+  `;
+  document.head.appendChild(el);
+};
+injectCSS();
 
-const T = {
-  bg: "#080b0f",
-  bgCard: "#0d1117",
-  bgHover: "#161b22",
-  bgInput: "#161b22",
-  border: "#21262d",
-  border2: "#30363d",
-  text: "#e6edf3",
-  text2: "#8b949e",
-  text3: "#484f58",
-  green: "#3fb950",
-  greenBg: "#0d2b1a",
-  greenBd: "#1a4a2e",
-  red: "#f85149",
-  redBg: "#2b0d0d",
-  redBd: "#4a1a1a",
-  amber: "#d29922",
-  amberBg: "#2b2000",
-  blue: "#58a6ff",
-  blueBg: "#0d2240",
-  purple: "#a371f7",
-  accent: "#238636",
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const C = {
+  bg:     '#0a0a0f',
+  bg1:    '#0d1117',
+  bg2:    '#161b22',
+  bg3:    '#1c2128',
+  bdr:    '#21262d',
+  bdr2:   '#30363d',
+  text:   '#e6edf3',
+  text2:  '#8b949e',
+  text3:  '#484f58',
+  green:  '#3fb950',
+  greenD: '#0b3d16',
+  greenB: '#196127',
+  red:    '#f85149',
+  redD:   '#3d0b0b',
+  redB:   '#6e1c1c',
+  amber:  '#e3b341',
+  amberD: '#3d2b00',
+  blue:   '#58a6ff',
+  blueD:  '#0c2040',
+  blueB:  '#1a3a6e',
+  teal:   '#39d353',
 };
 
-const S = {
-  app: {
-    minHeight: "100vh",
-    background: T.bg,
-    color: T.text,
-    fontFamily: "'Inter',sans-serif",
-  },
-  nav: {
-    background: "rgba(13,17,23,0.95)",
-    backdropFilter: "blur(12px)",
-    borderBottom: `1px solid ${T.border}`,
-    padding: "0 24px",
-    display: "flex",
-    alignItems: "center",
-    height: 52,
-    gap: 0,
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
-  },
-  logo: {
-    fontSize: 15,
-    fontWeight: 600,
-    color: T.text,
-    letterSpacing: "-0.3px",
-    marginRight: 32,
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  logoDot: {
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    background: T.green,
-    animation: "pulse 2s infinite",
-  },
-  navBtn: (a) => ({
-    padding: "0 16px",
-    height: 52,
-    fontSize: 13,
-    fontWeight: a ? 500 : 400,
-    color: a ? T.text : T.text2,
-    cursor: "pointer",
-    border: "none",
-    background: "none",
-    borderBottom: a ? `2px solid ${T.green}` : "2px solid transparent",
-    transition: "all .15s",
-    whiteSpace: "nowrap",
-  }),
-  main: { padding: "16px 24px", maxWidth: 1600, margin: "0 auto" },
-  grid4: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4,1fr)",
-    gap: 10,
-    marginBottom: 16,
-  },
-  metric: {
-    background: T.bgCard,
-    border: `1px solid ${T.border}`,
-    borderRadius: 8,
-    padding: "12px 16px",
-    position: "relative",
-    overflow: "hidden",
-  },
-  metricAccent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    background: `linear-gradient(90deg, ${T.green}, transparent)`,
-  },
-  mLabel: {
-    fontSize: 10,
-    color: T.text3,
-    textTransform: "uppercase",
-    letterSpacing: ".08em",
-    marginBottom: 6,
-    fontWeight: 500,
-  },
-  mVal: {
-    fontSize: 22,
-    fontWeight: 600,
-    color: T.text,
-    fontFamily: "'JetBrains Mono',monospace",
-    letterSpacing: "-0.5px",
-  },
-  mSub: {
-    fontSize: 11,
-    marginTop: 4,
-    fontFamily: "'JetBrains Mono',monospace",
-  },
-  card: {
-    background: T.bgCard,
-    border: `1px solid ${T.border}`,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-  },
-  secTitle: {
-    fontSize: 10,
-    fontWeight: 600,
-    color: T.text3,
-    textTransform: "uppercase",
-    letterSpacing: ".1em",
-    marginBottom: 12,
-  },
-  tHead: {
-    display: "grid",
-    gridTemplateColumns: "76px 1fr 82px 82px 52px 100px 108px",
-    gap: 8,
-    padding: "6px 12px",
-    fontSize: 10,
-    color: T.text3,
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: ".06em",
-    borderBottom: `1px solid ${T.border}`,
-    background: "rgba(22,27,34,0.5)",
-  },
-  tRow: {
-    display: "grid",
-    gridTemplateColumns: "76px 1fr 82px 82px 52px 100px 108px",
-    gap: 8,
-    padding: "9px 12px",
-    fontSize: 12,
-    borderBottom: `1px solid rgba(33,38,45,0.5)`,
-    cursor: "pointer",
-    alignItems: "center",
-    transition: "background .1s",
-  },
-  btn: {
-    background: T.accent,
-    color: "#fff",
-    border: `1px solid ${T.green}`,
-    borderRadius: 6,
-    padding: "7px 16px",
-    fontSize: 12,
-    fontWeight: 500,
-    cursor: "pointer",
-    transition: "all .15s",
-  },
-  btnSm: {
-    background: "transparent",
-    color: T.text2,
-    border: `1px solid ${T.border2}`,
-    borderRadius: 6,
-    padding: "4px 10px",
-    fontSize: 11,
-    cursor: "pointer",
-    transition: "all .15s",
-  },
-  btnOutline: {
-    background: "transparent",
-    color: T.text2,
-    border: `1px solid ${T.border}`,
-    borderRadius: 6,
-    padding: "6px 14px",
-    fontSize: 12,
-    cursor: "pointer",
-  },
-  input: {
-    background: T.bgInput,
-    border: `1px solid ${T.border2}`,
-    borderRadius: 6,
-    padding: "6px 10px",
-    fontSize: 12,
-    color: T.text,
-    outline: "none",
-    fontFamily: "'Inter',sans-serif",
-  },
-  select: {
-    background: T.bgInput,
-    border: `1px solid ${T.border2}`,
-    borderRadius: 6,
-    padding: "6px 10px",
-    fontSize: 12,
-    color: T.text,
-    outline: "none",
-    fontFamily: "'Inter',sans-serif",
-  },
-};
+// ── Utilities ─────────────────────────────────────────────────────────────────
+const fmt  = (v, d=2) => v != null ? (+v).toLocaleString('en-IN', {minimumFractionDigits:d, maximumFractionDigits:d}) : '—';
+const pct  = (v) => v != null ? `${v>=0?'+':''}${(+v).toFixed(2)}%` : '—';
+const gc   = (v) => v >= 0 ? C.green : C.red;
+const mono = {fontFamily:"'JetBrains Mono',monospace"};
 
-const pill = (type) => {
-  const m = {
-    BUY: [T.greenBg, T.green, T.greenBd],
-    SELL: [T.redBg, T.red, T.redBd],
-    HOLD: [T.amberBg, T.amber, "#3d2e00"],
-    CALL: [T.blueBg, T.blue, "#1a3a5c"],
-    PUT: [T.redBg, "#f472b6", T.redBd],
-    NEUTRAL: ["#161b22", T.text3, T.border],
-    OPEN: [T.blueBg, T.blue, "#1a3a5c"],
-    CLOSED: ["#161b22", T.text3, T.border],
+// ── Atoms ─────────────────────────────────────────────────────────────────────
+const Pill = ({type, size='sm'}) => {
+  const map = {
+    BUY:       [C.greenD, C.green,  C.greenB],
+    SELL:      [C.redD,   C.red,    C.redB],
+    HOLD:      [C.amberD, C.amber,  '#5a4500'],
+    CALL:      [C.blueD,  C.blue,   C.blueB],
+    PUT:       [C.redD,   '#f472b6',C.redB],
+    NEUTRAL:   ['#161b22',C.text3,  C.bdr2],
+    OPEN:      [C.blueD,  C.blue,   C.blueB],
+    CLOSED:    ['#161b22',C.text3,  C.bdr],
+    EXCELLENT: [C.greenD, C.green,  C.greenB],
+    GOOD:      [C.blueD,  C.blue,   C.blueB],
+    FAIR:      [C.amberD, C.amber,  '#5a4500'],
+    POOR:      [C.redD,   C.red,    C.redB],
+    SKIP:      ['#161b22',C.text3,  C.bdr],
   };
-  const [bg, color, bd] = m[type] || m.NEUTRAL;
+  const [bg,col,bd] = map[type] || map.NEUTRAL;
   return (
-    <span
-      style={{
-        background: bg,
-        color,
-        border: `1px solid ${bd}`,
-        fontSize: 10,
-        fontWeight: 600,
-        padding: "2px 8px",
-        borderRadius: 4,
-        display: "inline-block",
-        letterSpacing: ".04em",
-      }}
-    >
-      {type}
-    </span>
+    <span style={{
+      background:bg, color:col, border:`1px solid ${bd}`,
+      fontSize: size==='lg'?12:10, fontWeight:600,
+      padding: size==='lg'?'3px 10px':'2px 7px',
+      borderRadius:4, display:'inline-block', letterSpacing:'.04em', whiteSpace:'nowrap'
+    }}>{type}</span>
   );
 };
 
-const fmt = (v, d = 2) =>
-  v != null
-    ? (+v).toLocaleString("en-IN", {
-        minimumFractionDigits: d,
-        maximumFractionDigits: d,
-      })
-    : "—";
-const fmtPct = (v) =>
-  v != null ? `${v >= 0 ? "+" : ""}${(+v).toFixed(2)}%` : "—";
-const cc = (v) => (v >= 0 ? T.green : T.red);
-const Spinner = () => (
-  <div
-    style={{ textAlign: "center", padding: 40, color: T.text3, fontSize: 13 }}
-  >
-    <div
-      style={{
-        width: 20,
-        height: 20,
-        border: `2px solid ${T.border2}`,
-        borderTopColor: T.green,
-        borderRadius: "50%",
-        animation: "spin .7s linear infinite",
-        margin: "0 auto 12px",
-        display: "block",
-      }}
-    />
-    Loading...
-    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+const Spinner = ({text='Loading...'}) => (
+  <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'48px 16px',gap:12,color:C.text3}}>
+    <div style={{width:18,height:18,border:`2px solid ${C.bdr2}`,borderTopColor:C.green,borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
+    <span style={{fontSize:12}}>{text}</span>
   </div>
 );
-const SentBar = ({ val }) => {
-  const c = val > 0.65 ? T.green : val < 0.4 ? T.red : T.amber;
+
+const SentBar = ({val}) => {
+  const pv = Math.round((val||0)*100);
+  const col = val>0.65?C.green:val<0.4?C.red:C.amber;
   return (
     <div>
-      <div
-        style={{
-          fontSize: 10,
-          color: T.text3,
-          marginBottom: 2,
-          fontFamily: "'JetBrains Mono',monospace",
-        }}
-      >
-        {Math.round(val * 100)}%
-      </div>
-      <div
-        style={{
-          height: 3,
-          background: T.border,
-          borderRadius: 2,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            width: `${Math.round(val * 100)}%`,
-            height: "100%",
-            background: c,
-            borderRadius: 2,
-          }}
-        />
+      <span style={{fontSize:10,color:col,...mono,fontWeight:500}}>{pv}%</span>
+      <div style={{height:2,background:C.bg3,borderRadius:1,overflow:'hidden',marginTop:3}}>
+        <div style={{width:`${pv}%`,height:'100%',background:col,borderRadius:1}}/>
       </div>
     </div>
   );
 };
 
-// ── Market Banner ─────────────────────────────────────────────────────────────
-function MarketBanner({ data }) {
-  const now = new Date();
-  const ist = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-  );
-  const h = ist.getHours(),
-    m = ist.getMinutes();
-  const isOpen =
-    (h > 9 || (h === 9 && m >= 15)) && (h < 15 || (h === 15 && m <= 30));
-  const timeStr = ist.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+const Card = ({children, style={}}) => (
+  <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,padding:14,marginBottom:10,...style}}>
+    {children}
+  </div>
+);
 
+const MetCard = ({label, value, sub, subColor, accent}) => (
+  <div style={{background:C.bg1,border:`1px solid ${accent||C.bdr}`,borderRadius:10,padding:'12px 14px',position:'relative',overflow:'hidden'}}>
+    {accent && <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${accent},transparent)`}}/>}
+    <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4,fontWeight:500}}>{label}</div>
+    <div style={{fontSize:18,fontWeight:700,color:C.text,...mono,letterSpacing:'-0.5px'}}>{value}</div>
+    {sub && <div style={{fontSize:10,marginTop:2,color:subColor||C.text3,...mono}}>{sub}</div>}
+  </div>
+);
+
+// ── IST Clock ─────────────────────────────────────────────────────────────────
+function ISTClock() {
+  const [info, setInfo] = useState({time:'', open:false});
+  useEffect(() => {
+    const tick = () => {
+      const ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
+      const h = ist.getHours(), m = ist.getMinutes(), d = ist.getDay();
+      const open = d>0&&d<6&&((h>9||(h===9&&m>=15))&&(h<15||(h===15&&m<=30)));
+      setInfo({
+        time: ist.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}),
+        open
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: 10,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: isOpen ? T.green : T.red,
-              animation: isOpen ? "pulse 2s infinite" : "none",
-            }}
+    <div style={{display:'flex',alignItems:'center',gap:6}}>
+      <div style={{width:6,height:6,borderRadius:'50%',background:info.open?C.green:C.red,animation:info.open?'pulse 2s infinite':'none',flexShrink:0}}/>
+      <span style={{fontSize:11,color:info.open?C.green:C.red,fontWeight:500,whiteSpace:'nowrap'}}>{info.open?'OPEN':'CLOSED'}</span>
+      <span style={{fontSize:11,color:C.text3,...mono,whiteSpace:'nowrap'}}>{info.time}</span>
+    </div>
+  );
+}
+
+// ── Market Banner ─────────────────────────────────────────────────────────────
+function MarketBanner({data}) {
+  const indices = [['NIFTY50','Nifty 50'],['BANKNIFTY','Bank Nifty'],['SENSEX','Sensex'],['VIX','VIX']];
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,marginBottom:12}}>
+      {indices.map(([k,l]) => {
+        const d = data?.[k];
+        const up = (d?.change_pct||0) >= 0;
+        return (
+          <MetCard key={k} label={l}
+            value={d?.value ? fmt(d.value,0) : '—'}
+            sub={d ? `${up?'▲':'▼'} ${pct(d.change_pct)}` : 'Loading...'}
+            subColor={d ? gc(d.change_pct) : C.text3}
+            accent={d ? gc(d.change_pct) : null}
           />
-          <span
-            style={{
-              fontSize: 11,
-              color: isOpen ? T.green : T.red,
-              fontWeight: 500,
-            }}
-          >
-            {isOpen ? "MARKET OPEN" : "MARKET CLOSED"}
-          </span>
-        </div>
-        <span
-          style={{
-            fontSize: 11,
-            color: T.text3,
-            fontFamily: "'JetBrains Mono',monospace",
-          }}
-        >
-          {timeStr} IST
-        </span>
-        {data?.source && (
-          <span
-            style={{
-              fontSize: 10,
-              color: T.text3,
-              marginLeft: "auto",
-              background: T.bgCard,
-              border: `1px solid ${T.border}`,
-              padding: "2px 8px",
-              borderRadius: 4,
-            }}
-          >
-            {data.source === "scheduler_cache" ? "cached" : "live"}
-          </span>
-        )}
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Signal Summary Bar ────────────────────────────────────────────────────────
+function SignalBar({stocks}) {
+  const buys  = stocks.filter(s=>s.signal==='BUY').length;
+  const sells = stocks.filter(s=>s.signal==='SELL').length;
+  const holds = stocks.filter(s=>s.signal==='HOLD').length;
+  const total = buys + sells + holds || 1;
+  return (
+    <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,padding:'10px 14px',marginBottom:10}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+        <span style={{fontSize:11,color:C.text3,fontWeight:500}}>Market sentiment</span>
+        <span style={{fontSize:11,color:C.text3,...mono}}>{stocks.filter(s=>!s.error).length} stocks</span>
       </div>
-      <div style={S.grid4}>
-        {[
-          ["NIFTY50", "Nifty 50"],
-          ["BANKNIFTY", "Bank Nifty"],
-          ["SENSEX", "Sensex"],
-          ["VIX", "India VIX"],
-        ].map(([k, l]) => {
-          const d = data?.[k];
-          if (!d)
-            return (
-              <div key={k} style={S.metric}>
-                <div style={S.mLabel}>{l}</div>
-                <div style={{ ...S.mVal, color: T.text3 }}>—</div>
-              </div>
-            );
-          const isUp = d.change_pct >= 0;
-          return (
-            <div
-              key={k}
-              style={{ ...S.metric, borderColor: isUp ? T.greenBd : T.redBd }}
-            >
-              <div
-                style={{
-                  ...S.metricAccent,
-                  background: `linear-gradient(90deg,${isUp ? T.green : T.red},transparent)`,
-                }}
-              />
-              <div style={S.mLabel}>{l}</div>
-              <div style={S.mVal}>{d.value ? fmt(d.value, 0) : "—"}</div>
-              <div
-                style={{
-                  ...S.mSub,
-                  color: cc(d.change_pct),
-                  display: "flex",
-                  gap: 6,
-                  alignItems: "center",
-                }}
-              >
-                <span>{isUp ? "▲" : "▼"}</span>
-                <span>{fmtPct(d.change_pct)}</span>
-                <span style={{ color: T.text3 }}>
-                  ({fmt(Math.abs(d.change), 0)})
-                </span>
-              </div>
-            </div>
-          );
-        })}
+      <div style={{display:'flex',height:6,borderRadius:3,overflow:'hidden',gap:2,marginBottom:6}}>
+        <div style={{width:`${buys/total*100}%`,background:C.green,borderRadius:3}}/>
+        <div style={{width:`${holds/total*100}%`,background:C.amber,borderRadius:3}}/>
+        <div style={{width:`${sells/total*100}%`,background:C.red,borderRadius:3}}/>
+      </div>
+      <div style={{display:'flex',gap:16}}>
+        {[[buys,'BUY',C.green],[holds,'HOLD',C.amber],[sells,'SELL',C.red]].map(([n,l,c])=>(
+          <div key={l} style={{display:'flex',alignItems:'center',gap:5}}>
+            <div style={{width:6,height:6,borderRadius:'50%',background:c}}/>
+            <span style={{fontSize:11,color:c,fontWeight:600,...mono}}>{n} {l}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ── Stocks Table ──────────────────────────────────────────────────────────────
-function StocksTable({ onSelect }) {
-  const [stocks, setStocks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sector, setSector] = useState("");
-  const [sort, setSort] = useState("signal");
-  const [search, setSearch] = useState("");
-  const [lastSignals, setLastSignals] = useState({});
-  const [alerts, setAlerts] = useState([]);
-  const [nextRefresh, setNextRefresh] = useState(300);
+// ── Alert Banner ──────────────────────────────────────────────────────────────
+function AlertBanner({alerts, onSelect, onDismiss}) {
+  if (!alerts.length) return null;
+  return (
+    <div style={{marginBottom:10}}>
+      {alerts.map((a,i) => (
+        <div key={i} className="fade-up" style={{
+          display:'flex',alignItems:'center',gap:8,padding:'8px 12px',
+          borderRadius:8,marginBottom:6,
+          background:a.to==='BUY'?C.greenD:C.redD,
+          border:`1px solid ${a.to==='BUY'?C.greenB:C.redB}`,
+        }}>
+          <div style={{width:6,height:6,borderRadius:'50%',background:a.to==='BUY'?C.green:C.red,animation:'pulse 1s infinite',flexShrink:0}}/>
+          <span style={{fontWeight:700,color:C.text,fontSize:13,...mono}}>{a.sym}</span>
+          <Pill type={a.to} size="lg"/>
+          <span style={{color:C.text2,fontSize:11,...mono}}>₹{fmt(a.price)}</span>
+          <span style={{marginLeft:'auto',fontSize:10,color:C.text3,...mono}}>{a.time}</span>
+          <button style={{background:C.bg2,border:`1px solid ${C.bdr2}`,color:C.text,padding:'2px 8px',borderRadius:4,fontSize:11,cursor:'pointer'}} onClick={()=>onSelect(a.sym)}>→</button>
+          <button style={{background:'transparent',border:'none',color:C.text3,cursor:'pointer',fontSize:14,padding:'0 2px'}} onClick={()=>onDismiss(i)}>✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const loadStocks = (force = false) => {
+// ── Stock Card (Mobile) ───────────────────────────────────────────────────────
+function StockCard({s, onClick}) {
+  if (s.error) return null;
+  return (
+    <div className="hover-row" onClick={onClick} style={{
+      background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,
+      padding:'12px 14px',marginBottom:8,cursor:'pointer',
+      borderLeft:`3px solid ${s.signal==='BUY'?C.green:s.signal==='SELL'?C.red:C.bdr}`
+    }}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+        <div>
+          <div style={{fontWeight:700,color:C.text,fontSize:14,...mono}}>{s.sym}</div>
+          <div style={{color:C.text2,fontSize:11,marginTop:1}}>{s.name}</div>
+        </div>
+        <div style={{textAlign:'right'}}>
+          <div style={{fontWeight:600,color:C.text,fontSize:14,...mono}}>₹{fmt(s.price)}</div>
+          <div style={{color:gc(s.change_pct),fontSize:11,...mono,marginTop:1}}>{pct(s.change_pct)}</div>
+        </div>
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{display:'flex',gap:6,alignItems:'center'}}>
+          <Pill type={s.signal}/>
+          <Pill type={s.opt_rec||'NEUTRAL'}/>
+        </div>
+        <div style={{display:'flex',gap:12,alignItems:'center'}}>
+          <div>
+            <div style={{fontSize:9,color:C.text3,textTransform:'uppercase',letterSpacing:'.06em'}}>RSI</div>
+            <div style={{fontSize:11,color:s.rsi<35?C.green:s.rsi>65?C.red:C.text2,...mono,fontWeight:500}}>{s.rsi??'—'}</div>
+          </div>
+          <div style={{width:60}}>
+            <div style={{fontSize:9,color:C.text3,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:2}}>Sent.</div>
+            <SentBar val={s.sentiment??0.5}/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Desktop Stock Row ─────────────────────────────────────────────────────────
+function StockRow({s, onClick}) {
+  if (s.error) return null;
+  const cols = '76px 1fr 88px 88px 50px 100px 108px';
+  return (
+    <div className="hover-row" style={{display:'grid',gridTemplateColumns:cols,gap:8,padding:'9px 14px',borderBottom:`1px solid rgba(33,38,45,0.6)`,cursor:'pointer',alignItems:'center'}} onClick={onClick}>
+      <span style={{fontWeight:600,color:C.text,...mono,fontSize:12}}>{s.sym}</span>
+      <span style={{color:C.text2,fontSize:11,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</span>
+      <span style={{color:C.text,...mono,fontSize:12}}>₹{fmt(s.price)}</span>
+      <span style={{color:gc(s.change_pct),fontWeight:500,...mono,fontSize:12}}>{pct(s.change_pct)}</span>
+      <span style={{color:s.rsi>65?C.red:s.rsi<35?C.green:C.text3,...mono,fontSize:11}}>{s.rsi??'—'}</span>
+      <SentBar val={s.sentiment??0.5}/>
+      <div style={{display:'flex',gap:4}}><Pill type={s.signal}/><Pill type={s.opt_rec||'NEUTRAL'}/></div>
+    </div>
+  );
+}
+
+// ── Stocks List ───────────────────────────────────────────────────────────────
+function StocksList({onSelect}) {
+  const [stocks,setStocks]     = useState([]);
+  const [loading,setLoading]   = useState(true);
+  const [sector,setSector]     = useState('');
+  const [sort,setSort]         = useState('signal');
+  const [search,setSearch]     = useState('');
+  const [alerts,setAlerts]     = useState([]);
+  const [countdown,setCountdown] = useState(300);
+  const [isMobile,setIsMobile] = useState(window.innerWidth < 768);
+  const prevRef = useRef({});
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const loadStocks = useCallback((force=false) => {
     const url = force ? `${API}/stocks?force_refresh=true` : `${API}/stocks`;
-    if (force) setLoading(true);
-    axios
-      .get(url)
-      .then((r) => {
-        const newStocks = r.data.stocks || r.data;
-        setStocks((prev) => {
-          const newAlerts = [];
-          newStocks.forEach((s) => {
-            const oldSig = prev.find((p) => p.sym === s.sym)?.signal;
-            if (oldSig && oldSig !== s.signal && s.signal !== "HOLD") {
-              newAlerts.push({
-                sym: s.sym,
-                from: oldSig,
-                to: s.signal,
-                price: s.price,
-                time: new Date().toLocaleTimeString("en-IN"),
-              });
-            }
-          });
-          if (newAlerts.length) {
-            setAlerts((a) => [...newAlerts, ...a].slice(0, 5));
-            if (
-              "Notification" in window &&
-              Notification.permission === "granted"
-            ) {
-              newAlerts.forEach(
-                (a) =>
-                  new Notification(`NiftySignal: ${a.sym} → ${a.to}`, {
-                    body: `Price ₹${a.price} | Signal changed to ${a.to}`,
-                  }),
-              );
-            }
-          }
-          return newStocks;
-        });
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
+    axios.get(url).then(r => {
+      const ns = r.data.stocks || r.data || [];
+      const valid = ns.filter(s => !s.error);
+      const newAlerts = [];
+      valid.forEach(s => {
+        const old = prevRef.current[s.sym];
+        if (old && old !== s.signal && s.signal !== 'HOLD') {
+          newAlerts.push({sym:s.sym, from:old, to:s.signal, price:s.price, time:new Date().toLocaleTimeString('en-IN')});
+        }
+        prevRef.current[s.sym] = s.signal;
+      });
+      if (newAlerts.length) {
+        setAlerts(a => [...newAlerts, ...a].slice(0,5));
+        if ('Notification' in window && Notification.permission === 'granted')
+          newAlerts.forEach(a => new Notification(`${a.sym} → ${a.to}`, {body:`₹${a.price}`}));
+      }
+      setStocks(ns);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
     loadStocks();
-    if ("Notification" in window) Notification.requestPermission();
-    const interval = setInterval(() => {
-      setNextRefresh((n) => {
-        if (n <= 1) {
-          loadStocks();
-          return 300;
-        }
-        return n - 1;
-      });
+    if ('Notification' in window) Notification.requestPermission();
+    const id = setInterval(() => {
+      setCountdown(n => { if (n<=1){loadStocks();return 300;} return n-1; });
     }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => clearInterval(id);
+  }, [loadStocks]);
 
-  const sigOrd = { BUY: 0, HOLD: 1, SELL: 2 };
-  const filtered = stocks
-    .filter(
-      (s) =>
-        (!search ||
-          s.sym?.includes(search.toUpperCase()) ||
-          s.name?.toLowerCase().includes(search.toLowerCase())) &&
-        (!sector || s.sector === sector),
-    )
-    .sort((a, b) =>
-      sort === "signal"
-        ? (sigOrd[a.signal] ?? 1) - (sigOrd[b.signal] ?? 1)
-        : sort === "change_pct"
-          ? (b.change_pct || 0) - (a.change_pct || 0)
-          : sort === "sentiment"
-            ? (b.sentiment || 0) - (a.sentiment || 0)
-            : (a.rsi || 50) - (b.rsi || 50),
-    );
-
-  const buys = stocks.filter((s) => s.signal === "BUY").length,
-    sells = stocks.filter((s) => s.signal === "SELL").length;
+  const SECTORS = ['Banking','IT','Energy','FMCG','Auto','Pharma','Finance','Infra','Consumer','Conglomerate','Metal','Tech','Healthcare','Retail','Aviation','Defence','Travel'];
+  const sigOrd = {BUY:0,SELL:1,HOLD:2};
+  const valid = stocks.filter(s => !s.error);
+  const filtered = valid
+    .filter(s=>(!search||s.sym?.includes(search.toUpperCase())||s.name?.toLowerCase().includes(search.toLowerCase()))&&(!sector||s.sector===sector))
+    .sort((a,b)=>sort==='signal'?(sigOrd[a.signal]??2)-(sigOrd[b.signal]??2):sort==='change_pct'?(b.change_pct||0)-(a.change_pct||0):sort==='sentiment'?(b.sentiment||0)-(a.sentiment||0):(a.rsi||50)-(b.rsi||50));
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          marginBottom: 14,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
+      <AlertBanner alerts={alerts} onSelect={onSelect} onDismiss={i=>setAlerts(a=>a.filter((_,j)=>j!==i))}/>
+      {valid.length > 0 && <SignalBar stocks={valid}/>}
+
+      <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap'}}>
         <input
-          style={{ ...S.input, width: 160 }}
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select
-          style={S.select}
-          value={sector}
-          onChange={(e) => setSector(e.target.value)}
-        >
+          style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'7px 10px',fontSize:12,color:C.text,flex:1,minWidth:100}}
+          placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        <select style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'7px 10px',fontSize:12,color:C.text}} value={sector} onChange={e=>setSector(e.target.value)}>
           <option value="">All sectors</option>
-          {[
-            "Banking",
-            "IT",
-            "Energy",
-            "FMCG",
-            "Auto",
-            "Pharma",
-            "Finance",
-            "Infra",
-            "Consumer",
-            "Conglomerate",
-          ].map((s) => (
-            <option key={s}>{s}</option>
-          ))}
+          {SECTORS.map(s=><option key={s}>{s}</option>)}
         </select>
-        <select
-          style={S.select}
-          value={sort}
-          onChange={(e) => setSort(e.target.value)}
-        >
-          <option value="signal">Sort: Signal</option>
-          <option value="change_pct">Sort: Change</option>
-          <option value="sentiment">Sort: Sentiment</option>
-          <option value="rsi">Sort: RSI</option>
+        <select style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'7px 10px',fontSize:12,color:C.text}} value={sort} onChange={e=>setSort(e.target.value)}>
+          <option value="signal">Signal</option>
+          <option value="change_pct">Change</option>
+          <option value="sentiment">Sentiment</option>
+          <option value="rsi">RSI</option>
         </select>
-        <button style={S.btnSm} onClick={() => loadStocks(true)}>
-          ↺ Refresh
-        </button>
-        <span style={{ fontSize: 11, color: "#555" }}>
-          Auto-refresh in {nextRefresh}s
-        </span>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: "#666" }}>
-          <span style={{ color: "#22c55e", fontWeight: 600 }}>{buys} BUY</span>{" "}
-          ·{" "}
-          <span style={{ color: "#ef4444", fontWeight: 600 }}>
-            {sells} SELL
-          </span>{" "}
-          ·{" "}
-          <span style={{ color: "#f59e0b", fontWeight: 600 }}>
-            {stocks.length - buys - sells} HOLD
-          </span>
-        </div>
+        <button className="hover-btn" style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'7px 12px',fontSize:11,color:C.text2,cursor:'pointer',whiteSpace:'nowrap'}} onClick={()=>loadStocks(true)}>↺</button>
       </div>
-      {alerts.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          {alerts.map((a, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 14px",
-                borderRadius: 8,
-                marginBottom: 6,
-                background: a.to === "BUY" ? "#0d2b1a" : "#2b0d0d",
-                border: `1px solid ${a.to === "BUY" ? "#22c55e" : "#ef4444"}`,
-              }}
-            >
-              <span style={{ fontSize: 16 }}>🔔</span>
-              <span style={{ fontWeight: 700, color: "#fff" }}>{a.sym}</span>
-              <span style={{ color: "#888", fontSize: 13 }}>
-                signal changed to
-              </span>
-              <span
-                style={{
-                  fontWeight: 700,
-                  color: a.to === "BUY" ? "#22c55e" : "#ef4444",
-                  fontSize: 15,
-                }}
-              >
-                {a.to}
-              </span>
-              <span style={{ color: "#888", fontSize: 13 }}>at ₹{a.price}</span>
-              <span style={{ marginLeft: "auto", fontSize: 11, color: "#555" }}>
-                {a.time}
-              </span>
-              <button
-                style={{ ...S.btnSm, padding: "2px 8px", fontSize: 11 }}
-                onClick={() => onSelect(a.sym)}
-              >
-                View →
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div style={S.card}>
-        <div style={S.tHead}>
-          <span>Symbol</span>
-          <span>Company</span>
-          <span>Price</span>
-          <span>Change</span>
-          <span>RSI</span>
-          <span>Sentiment</span>
-          <span>Signal</span>
-        </div>
-        {loading ? (
-          <Spinner />
+      <div style={{fontSize:10,color:C.text3,marginBottom:8,textAlign:'right',...mono}}>
+        next refresh in {countdown}s
+      </div>
+
+      {loading ? <Spinner text="Fetching live NSE data..."/> :
+        filtered.length === 0 ? <div style={{padding:32,textAlign:'center',color:C.text3,fontSize:12}}>No stocks found</div> :
+        isMobile ? (
+          filtered.map(s => <StockCard key={s.sym} s={s} onClick={()=>onSelect(s.sym)}/>)
         ) : (
-          filtered.map((s) => (
-            <div
-              key={s.sym}
-              style={S.tRow}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = T.bgHover)
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "transparent")
-              }
-              onClick={() => onSelect(s.sym)}
-            >
-              <span
-                style={{
-                  fontWeight: 600,
-                  color: T.text,
-                  fontFamily: "'JetBrains Mono',monospace",
-                  fontSize: 12,
-                }}
-              >
-                {s.sym}
-              </span>
-              <span
-                style={{
-                  color: T.text2,
-                  fontSize: 11,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {s.name}
-              </span>
-              <span
-                style={{
-                  color: T.text,
-                  fontWeight: 500,
-                  fontFamily: "'JetBrains Mono',monospace",
-                  fontSize: 12,
-                }}
-              >
-                ₹{fmt(s.price)}
-              </span>
-              <span
-                style={{
-                  color: cc(s.change_pct),
-                  fontWeight: 500,
-                  fontFamily: "'JetBrains Mono',monospace",
-                  fontSize: 12,
-                }}
-              >
-                {fmtPct(s.change_pct)}
-              </span>
-              <span
-                style={{
-                  color: s.rsi > 65 ? T.red : s.rsi < 35 ? T.green : T.text3,
-                  fontFamily: "'JetBrains Mono',monospace",
-                  fontSize: 12,
-                }}
-              >
-                {s.rsi ?? "—"}
-              </span>
-              <SentBar val={s.sentiment ?? 0.5} />
-              <div style={{ display: "flex", gap: 4 }}>
-                {pill(s.signal)}
-                {pill(s.opt_rec)}
-              </div>
+          <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,overflow:'hidden'}}>
+            <div style={{display:'grid',gridTemplateColumns:'76px 1fr 88px 88px 50px 100px 108px',gap:8,padding:'7px 14px',fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',background:'rgba(22,27,34,0.8)',borderBottom:`1px solid ${C.bdr}`}}>
+              <span>Symbol</span><span>Company</span><span>Price</span><span>Change</span><span>RSI</span><span>Sentiment</span><span>Signal</span>
             </div>
-          ))
-        )}
-      </div>
+            {filtered.map(s => <StockRow key={s.sym} s={s} onClick={()=>onSelect(s.sym)}/>)}
+          </div>
+        )
+      }
     </div>
   );
 }
 
 // ── Stock Detail ──────────────────────────────────────────────────────────────
-function StockDetail({ symbol, onBack, onAddTrade }) {
-  const [data, setData] = useState(null);
-  const [tradePlan, setTradePlan] = useState(null);
-  const [chart, setChart] = useState([]);
-  const [period, setPeriod] = useState("3mo");
-  const [loading, setLoading] = useState(true);
-  const [addMsg, setAddMsg] = useState("");
+function StockDetail({symbol, onBack}) {
+  const [data,setData]       = useState(null);
+  const [plan,setPlan]       = useState(null);
+  const [chart,setChart]     = useState([]);
+  const [period,setPeriod]   = useState('3mo');
+  const [loading,setLoading] = useState(true);
+  const [msg,setMsg]         = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -765,879 +400,213 @@ function StockDetail({ symbol, onBack, onAddTrade }) {
       axios.get(`${API}/stock/${symbol}`),
       axios.get(`${API}/chart/${symbol}?period=3mo`),
       axios.get(`${API}/trade-plan/${symbol}?capital=100000`),
-    ])
-      .then(([dr, cr, tr]) => {
-        setData(dr.data);
-        setChart(cr.data.data || []);
-        setTradePlan(tr.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    ]).then(([dr,cr,tr]) => {
+      setData(dr.data); setChart(cr.data.data||[]); setPlan(tr.data); setLoading(false);
+    }).catch(() => setLoading(false));
   }, [symbol]);
 
   useEffect(() => {
-    axios
-      .get(`${API}/chart/${symbol}?period=${period}`)
-      .then((r) => setChart(r.data.data || []))
-      .catch(() => {});
+    axios.get(`${API}/chart/${symbol}?period=${period}`).then(r=>setChart(r.data.data||[])).catch(()=>{});
   }, [symbol, period]);
 
-  if (loading) return <Spinner />;
-  if (!data)
-    return <div style={{ color: "#888", padding: 20 }}>Failed to load</div>;
-  const chartColor = data.change_pct >= 0 ? "#22c55e" : "#ef4444";
-  const hasSignal = data.signal === "BUY" || data.signal === "SELL";
+  const addPaper = async () => {
+    if (!plan?.stop_loss) { setMsg('No trade setup'); return; }
+    try {
+      await axios.post(`${API}/paper/trades`, {
+        sym:symbol, signal:plan.signal, entry:plan.entry,
+        stop_loss:plan.stop_loss, target1:plan.target1,
+        target2:plan.target2, qty:plan.position_sizing?.quantity||1, notes:''
+      });
+      setMsg('✓ Paper trade logged!');
+      setTimeout(() => setMsg(''), 4000);
+    } catch(e) { setMsg('Failed'); }
+  };
+
+  if (loading) return <Spinner text={`Loading ${symbol}...`}/>;
+  if (!data) return <div style={{color:C.red,padding:20,textAlign:'center'}}>Failed to load {symbol}</div>;
+
+  const chartColor = (data.change_pct||0) >= 0 ? C.green : C.red;
+  const hasSignal = plan?.signal==='BUY' || plan?.signal==='SELL';
+  const qc = {EXCELLENT:C.green,GOOD:C.blue,FAIR:C.amber,POOR:C.red,SKIP:C.text3};
 
   return (
-    <div>
-      <button style={S.btnSm} onClick={onBack}>
-        ← Back
+    <div className="fade-up">
+      <button onClick={onBack} style={{background:'transparent',border:`1px solid ${C.bdr}`,color:C.text2,padding:'6px 12px',borderRadius:6,fontSize:12,cursor:'pointer',marginBottom:14,display:'flex',alignItems:'center',gap:6}}>
+        ← All stocks
       </button>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          margin: "16px 0",
-        }}
-      >
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
         <div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: "#fff" }}>
-            {data.sym}
-          </div>
-          <div style={{ color: "#888", fontSize: 14 }}>
-            {data.name} · {data.sector}
-          </div>
+          <div style={{fontSize:24,fontWeight:700,color:C.text,...mono,letterSpacing:'-1px'}}>{data.sym}</div>
+          <div style={{color:C.text2,fontSize:12,marginTop:2}}>{data.name} · {data.sector}</div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 32, fontWeight: 700, color: "#fff" }}>
-            ₹{fmt(data.price)}
-          </div>
-          <div style={{ color: cc(data.change_pct), fontWeight: 600 }}>
-            {fmtPct(data.change_pct)}
-          </div>
+        <div style={{textAlign:'right'}}>
+          <div style={{fontSize:22,fontWeight:700,color:C.text,...mono}}>₹{fmt(data.price)}</div>
+          <div style={{color:gc(data.change_pct),fontWeight:500,...mono,fontSize:12,marginTop:2}}>{pct(data.change_pct)}</div>
         </div>
       </div>
 
-      {/* Key metrics */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(6,1fr)",
-          gap: 10,
-          marginBottom: 16,
-        }}
-      >
-        {[
-          ["RSI (14)", data.rsi],
-          ["52W High", data.week_high ? "₹" + fmt(data.week_high, 0) : "—"],
-          ["52W Low", data.week_low ? "₹" + fmt(data.week_low, 0) : "—"],
-          ["P/E", data.pe_ratio ? fmt(data.pe_ratio) : "—"],
-          ["Beta", data.beta ? fmt(data.beta) : "—"],
-          [
-            "Sentiment",
-            data.sentiment ? Math.round(data.sentiment * 100) + "%" : "—",
-          ],
-        ].map(([l, v]) => (
-          <div key={l} style={S.metric}>
-            <div style={S.mLabel}>{l}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
-              {v ?? "—"}
-            </div>
-          </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:10}}>
+        {[['RSI',data.rsi],['52W H',data.week_high?`₹${fmt(data.week_high,0)}`:'—'],['52W L',data.week_low?`₹${fmt(data.week_low,0)}`:'—']].map(([l,v])=>(
+          <MetCard key={l} label={l} value={v??'—'} accent={l==='RSI'&&data.rsi?(data.rsi<35?C.green:data.rsi>65?C.red:null):null}/>
+        ))}
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:10}}>
+        {[['P/E',data.pe_ratio?fmt(data.pe_ratio):'—'],['Beta',data.beta?fmt(data.beta):'—'],['Sent.',data.sentiment?`${Math.round(data.sentiment*100)}%`:'—']].map(([l,v])=>(
+          <MetCard key={l} label={l} value={v??'—'}/>
         ))}
       </div>
 
-      {/* Trade setup box */}
-      {hasSignal && tradePlan && (
-        <div
-          style={{
-            ...S.card,
-            border: `1px solid ${data.signal === "BUY" ? "#22c55e" : "#ef4444"}`,
-            marginBottom: 16,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 14,
-            }}
-          >
-            <div style={{ fontSize: 15, fontWeight: 600, color: "#fff" }}>
-              Trade setup — {data.sym}
+      {hasSignal && plan && (
+        <Card style={{borderColor:plan.signal==='BUY'?C.greenB:C.redB,marginBottom:10}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{fontSize:13,fontWeight:600,color:C.text}}>Trade setup</span>
+              <Pill type={plan.signal} size="lg"/>
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              {pill(data.signal)}
-              <span style={{ fontSize: 12, color: "#666" }}>
-                Confidence: {Math.round((tradePlan.confidence || 0) * 100)}% ·
-                R:R = {tradePlan.rr_ratio ?? "—"} · Quality:{" "}
-                <span
-                  style={{
-                    color:
-                      tradePlan.trade_quality === "EXCELLENT"
-                        ? "#22c55e"
-                        : tradePlan.trade_quality === "GOOD"
-                          ? "#60a5fa"
-                          : "#f59e0b",
-                  }}
-                >
-                  {tradePlan.trade_quality}
-                </span>
-              </span>
+            <div style={{display:'flex',gap:10,alignItems:'center'}}>
+              <span style={{fontSize:11,color:qc[plan.trade_quality]||C.text3,fontWeight:600}}>{plan.trade_quality}</span>
+              <span style={{fontSize:12,color:plan.rr_ratio>=2?C.green:plan.rr_ratio>=1?C.amber:C.red,fontWeight:700,...mono}}>R:R 1:{plan.rr_ratio}</span>
             </div>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5,1fr)",
-              gap: 10,
-              marginBottom: 14,
-            }}
-          >
-            {[
-              [
-                "Entry price",
-                "#fff",
-                tradePlan.entry ? "₹" + fmt(tradePlan.entry) : "—",
-              ],
-              [
-                "Stop loss",
-                "#ef4444",
-                tradePlan.stop_loss ? "₹" + fmt(tradePlan.stop_loss) : "—",
-              ],
-              [
-                "Target 1",
-                "#22c55e",
-                tradePlan.target1 ? "₹" + fmt(tradePlan.target1) : "—",
-              ],
-              [
-                "Target 2",
-                "#22c55e",
-                tradePlan.target2 ? "₹" + fmt(tradePlan.target2) : "—",
-              ],
-              [
-                "Target 3",
-                "#60a5fa",
-                tradePlan.target3 ? "₹" + fmt(tradePlan.target3) : "—",
-              ],
-            ].map(([l, c, v]) => (
-              <div
-                key={l}
-                style={{ background: "#1e1e28", borderRadius: 8, padding: 12 }}
-              >
-                <div style={{ fontSize: 11, color: "#666", marginBottom: 6 }}>
-                  {l}
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: c }}>
-                  {v}
-                </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+            {[['Entry',C.text,`₹${fmt(plan.entry)}`],['Stop loss',C.red,`₹${fmt(plan.stop_loss)}`],['Target 1',C.green,`₹${fmt(plan.target1)}`],['Target 2',C.green,`₹${fmt(plan.target2)}`]].map(([l,c,v])=>(
+              <div key={l} style={{background:C.bg2,borderRadius:8,padding:'10px 12px',border:`1px solid ${C.bdr}`}}>
+                <div style={{fontSize:10,color:C.text3,marginBottom:4,textTransform:'uppercase',letterSpacing:'.07em'}}>{l}</div>
+                <div style={{fontSize:16,fontWeight:600,color:c,...mono}}>{v}</div>
               </div>
             ))}
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4,1fr)",
-              gap: 10,
-              marginBottom: 14,
-            }}
-          >
-            {[
-              [
-                "Risk/share",
-                "#ef4444",
-                tradePlan.risk_per_share
-                  ? "₹" + fmt(tradePlan.risk_per_share)
-                  : "—",
-              ],
-              [
-                "Reward/share",
-                "#22c55e",
-                tradePlan.reward_per_share
-                  ? "₹" + fmt(tradePlan.reward_per_share)
-                  : "—",
-              ],
-              [
-                "Qty (1% risk)",
-                "#fff",
-                tradePlan.position_sizing?.quantity ?? "—",
-              ],
-              [
-                "Total cost",
-                "#aaa",
-                tradePlan.position_sizing?.total_cost
-                  ? "₹" + fmt(tradePlan.position_sizing.total_cost, 0)
-                  : "—",
-              ],
-            ].map(([l, c, v]) => (
-              <div
-                key={l}
-                style={{ background: "#1e1e28", borderRadius: 8, padding: 12 }}
-              >
-                <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>
-                  {l}
+
+          {plan.position_sizing && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
+              {[['Qty (1% risk)',C.text,plan.position_sizing.quantity],['Total cost',C.text2,`₹${fmt(plan.position_sizing.total_cost,0)}`]].map(([l,c,v])=>(
+                <div key={l} style={{background:C.bg2,borderRadius:8,padding:'8px 12px',border:`1px solid ${C.bdr}`}}>
+                  <div style={{fontSize:10,color:C.text3,marginBottom:3,textTransform:'uppercase',letterSpacing:'.07em'}}>{l}</div>
+                  <div style={{fontSize:14,fontWeight:600,color:c,...mono}}>{v}</div>
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: c }}>
-                  {v}
-                </div>
-              </div>
-            ))}
-          </div>
-          <button
-            style={{
-              ...S.btn,
-              opacity: tradePlan && tradePlan.stop_loss ? 1 : 0.5,
-            }}
-            onClick={async () => {
-              if (!tradePlan || !tradePlan.stop_loss) {
-                setAddMsg("No trade plan available");
-                return;
-              }
-              try {
-                await axios.post(`${API}/paper/trades`, {
-                  sym: symbol,
-                  signal: tradePlan.signal,
-                  entry: tradePlan.entry,
-                  stop_loss: tradePlan.stop_loss,
-                  target1: tradePlan.target1,
-                  target2: tradePlan.target2,
-                  qty: tradePlan.position_sizing?.quantity || 1,
-                  notes: "",
-                });
-                setAddMsg("✓ Paper trade opened! Check Paper Trading tab");
-                setTimeout(() => setAddMsg(""), 4000);
-              } catch (e) {
-                setAddMsg("Failed — check backend");
-              }
-            }}
-          >
-            + Add to paper trades
-          </button>
-          {addMsg && (
-            <div
-              style={{
-                marginTop: 8,
-                fontSize: 13,
-                color: addMsg.startsWith("✓") ? "#22c55e" : "#ef4444",
-              }}
-            >
-              {addMsg}
+              ))}
             </div>
           )}
-        </div>
+
+          <button className="hover-btn" onClick={addPaper} style={{
+            width:'100%',background:C.greenD,border:`1px solid ${C.greenB}`,
+            color:C.green,borderRadius:8,padding:'10px',fontSize:13,fontWeight:600,cursor:'pointer'
+          }}>+ Add to paper trades</button>
+          {msg && <div style={{marginTop:8,fontSize:12,color:msg.startsWith('✓')?C.green:C.red,...mono,textAlign:'center'}}>{msg}</div>}
+        </Card>
       )}
 
-      {/* Chart */}
-      <div style={{ ...S.card, marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <span style={S.secTitle}>Price chart</span>
-          <div style={{ display: "flex", gap: 6 }}>
-            {["1mo", "3mo", "6mo", "1y"].map((p) => (
-              <button
-                key={p}
-                style={{
-                  ...S.btnSm,
-                  background: period === p ? "#6c63ff" : "transparent",
-                  color: period === p ? "#fff" : "#888",
-                  border: "none",
-                  borderRadius: 6,
-                  padding: "4px 10px",
-                  fontSize: 12,
-                }}
-                onClick={() => setPeriod(p)}
-              >
-                {p}
-              </button>
+      <Card>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+          <span style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',fontWeight:600}}>Price chart</span>
+          <div style={{display:'flex',gap:4}}>
+            {['1mo','3mo','6mo','1y'].map(p=>(
+              <button key={p} style={{background:period===p?C.bg3:'transparent',border:`1px solid ${period===p?C.bdr2:C.bdr}`,color:period===p?C.text:C.text3,borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer'}} onClick={()=>setPeriod(p)}>{p}</button>
             ))}
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={chart}>
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={chart} margin={{top:4,right:0,left:0,bottom:0}}>
             <defs>
               <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={chartColor} stopOpacity={0.15} />
-                <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
+                <stop offset="5%" stopColor={chartColor} stopOpacity={0.2}/>
+                <stop offset="95%" stopColor={chartColor} stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e1e28" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 11, fill: "#666" }}
-              tickLine={false}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: "#666" }}
-              tickLine={false}
-              tickFormatter={(v) => `₹${Math.round(v)}`}
-              width={70}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "#1e1e28",
-                border: "1px solid #2a2a38",
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-              formatter={(v) => [`₹${fmt(v)}`, "Close"]}
-            />
-            <Area
-              type="monotone"
-              dataKey="close"
-              stroke={chartColor}
-              strokeWidth={2}
-              fill="url(#cg)"
-              dot={false}
-            />
+            <CartesianGrid strokeDasharray="2 4" stroke={C.bdr} vertical={false}/>
+            <XAxis dataKey="date" tick={{fontSize:9,fill:C.text3}} tickLine={false} axisLine={false} interval="preserveStartEnd"/>
+            <YAxis tick={{fontSize:9,fill:C.text3}} tickLine={false} axisLine={false} tickFormatter={v=>`₹${Math.round(v)}`} width={55}/>
+            <Tooltip contentStyle={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:6,fontSize:11}} formatter={v=>[`₹${fmt(v)}`,'Close']} labelStyle={{color:C.text2}}/>
+            <Area type="monotone" dataKey="close" stroke={chartColor} strokeWidth={1.5} fill="url(#cg)" dot={false}/>
           </AreaChart>
         </ResponsiveContainer>
-      </div>
-
-      <div
-        style={{
-          fontSize: 11,
-          color: "#444",
-          padding: "10px 0",
-          borderTop: "1px solid #2a2a38",
-        }}
-      >
-        Signal methodology: RSI(14) + MACD crossover + EMA20 deviation + news
-        sentiment. Stop loss = 1.5×ATR. Targets = 1×ATR and 2×ATR. Not
-        SEBI-registered investment advice.
-      </div>
-    </div>
-  );
-}
-
-// ── Paper Trading ─────────────────────────────────────────────────────────────
-function PaperTrading({ prefill, onClear }) {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [closing, setClosing] = useState(null);
-  const [exitPrice, setExitPrice] = useState("");
-  const [msg, setMsg] = useState("");
-
-  const loadStats = useCallback(() => {
-    axios
-      .get(`${API}/paper/stats`)
-      .then((r) => {
-        setStats(r.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
-
-  const closeTrade = async (id) => {
-    if (!exitPrice) return;
-    try {
-      await axios.post(`${API}/paper/trades/${id}/close`, {
-        exit_price: parseFloat(exitPrice),
-        notes: "Manual close",
-      });
-      setClosing(null);
-      setExitPrice("");
-      setMsg("Trade closed!");
-      setTimeout(() => setMsg(""), 3000);
-      loadStats();
-    } catch (e) {
-      setMsg("Failed to close trade");
-    }
-  };
-
-  const deleteTrade = async (id) => {
-    if (!window.confirm("Delete this trade?")) return;
-    await axios.delete(`${API}/paper/trades/${id}`);
-    loadStats();
-  };
-
-  if (loading) return <Spinner />;
-  const trades = stats?.trades || [];
-  const open = trades.filter((t) => t.status === "OPEN");
-  const closed = trades.filter((t) => t.status === "CLOSED");
-
-  return (
-    <div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5,1fr)",
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        {[
-          ["Total trades", stats?.total_trades ?? 0, "#fff"],
-          ["Open", stats?.open ?? 0, "#fff"],
-          ["Win rate", (stats?.win_rate ?? 0) + "%", "#22c55e"],
-          [
-            "Total P&L",
-            "₹" + (stats?.total_pnl ?? 0),
-            cc(stats?.total_pnl || 0),
-          ],
-          [
-            "Expectancy",
-            "₹" + (stats?.expectancy ?? 0),
-            cc(stats?.expectancy || 0),
-          ],
-        ].map(([l, v, c]) => (
-          <div key={l} style={S.metric}>
-            <div style={S.mLabel}>{l}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: c }}>{v}</div>
-          </div>
-        ))}
-      </div>
-
-      {msg && (
-        <div
-          style={{
-            padding: "10px 14px",
-            borderRadius: 8,
-            marginBottom: 12,
-            background: "#0d2b1a",
-            color: "#22c55e",
-            fontSize: 13,
-          }}
-        >
-          {msg}
-        </div>
-      )}
-
-      {open.length > 0 && (
-        <div style={{ ...S.card, marginBottom: 14 }}>
-          <div style={S.secTitle}>Open trades</div>
-          {open.map((t) => (
-            <div
-              key={t.id}
-              style={{ padding: "12px 0", borderBottom: "1px solid #1a1a24" }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 10,
-                }}
-              >
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <span
-                    style={{ fontWeight: 700, color: "#fff", fontSize: 15 }}
-                  >
-                    {t.sym}
-                  </span>
-                  {pill(t.signal)}
-                  <span style={{ fontSize: 12, color: "#666" }}>
-                    Qty: {t.qty} · Entry: ₹{fmt(t.entry)}
-                  </span>
-                </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  {closing === t.id ? (
-                    <>
-                      <input
-                        style={{ ...S.input, width: 100, padding: "4px 8px" }}
-                        placeholder="Exit ₹"
-                        value={exitPrice}
-                        onChange={(e) => setExitPrice(e.target.value)}
-                      />
-                      <button
-                        style={{ ...S.btn, padding: "5px 12px", fontSize: 12 }}
-                        onClick={() => closeTrade(t.id)}
-                      >
-                        Confirm
-                      </button>
-                      <button style={S.btnSm} onClick={() => setClosing(null)}>
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button style={S.btnSm} onClick={() => setClosing(t.id)}>
-                        Close trade
-                      </button>
-                      <button
-                        style={{ ...S.btnSm, color: "#ef4444" }}
-                        onClick={() => deleteTrade(t.id)}
-                      >
-                        Delete
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4,1fr)",
-                  gap: 8,
-                  fontSize: 12,
-                }}
-              >
-                {[
-                  ["Stop loss", "#ef4444", "₹" + fmt(t.stop_loss)],
-                  ["Target 1", "#22c55e", "₹" + fmt(t.target1)],
-                  ["Target 2", "#22c55e", "₹" + fmt(t.target2)],
-                  [
-                    "Opened",
-                    "#888",
-                    new Date(t.opened_at).toLocaleDateString("en-IN"),
-                  ],
-                ].map(([l, c, v]) => (
-                  <div
-                    key={l}
-                    style={{
-                      background: "#1e1e28",
-                      borderRadius: 6,
-                      padding: "6px 10px",
-                    }}
-                  >
-                    <div style={{ color: "#555", marginBottom: 2 }}>{l}</div>
-                    <div style={{ fontWeight: 600, color: c }}>{v}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {closed.length > 0 && (
-        <div style={S.card}>
-          <div style={S.secTitle}>Closed trades</div>
-          {closed
-            .slice()
-            .reverse()
-            .map((t) => (
-              <div
-                key={t.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "70px 80px 80px 80px 80px 80px 1fr",
-                  gap: 8,
-                  padding: "10px 0",
-                  borderBottom: "1px solid #1a1a24",
-                  fontSize: 13,
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ fontWeight: 700, color: "#fff" }}>{t.sym}</span>
-                {pill(t.signal)}
-                <span style={{ color: "#888" }}>₹{fmt(t.entry)}</span>
-                <span style={{ color: "#aaa" }}>→ ₹{fmt(t.exit_price)}</span>
-                <span style={{ color: cc(t.pnl || 0), fontWeight: 700 }}>
-                  {t.pnl >= 0 ? "+" : ""}₹{fmt(t.pnl)}
-                </span>
-                <span style={{ color: cc(t.pnl_pct || 0) }}>
-                  {t.pnl_pct >= 0 ? "+" : ""}
-                  {fmt(t.pnl_pct)}%
-                </span>
-                <span style={{ fontSize: 11, color: "#555" }}>
-                  {new Date(t.opened_at).toLocaleDateString("en-IN")}
-                </span>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {trades.length === 0 && (
-        <div style={{ ...S.card, textAlign: "center", padding: 40 }}>
-          <div style={{ fontSize: 14, color: "#888", marginBottom: 8 }}>
-            No paper trades yet
-          </div>
-          <div style={{ fontSize: 13, color: "#555" }}>
-            Go to Equity Signals, click a BUY stock, and click "+ Add to paper
-            trades"
-          </div>
-        </div>
-      )}
+      </Card>
     </div>
   );
 }
 
 // ── Options ───────────────────────────────────────────────────────────────────
 function OptionsAdvisor() {
-  const [sym, setSym] = useState("RELIANCE");
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [sym,setSym]     = useState('RELIANCE');
+  const [data,setData]   = useState(null);
+  const [loading,setLoading] = useState(false);
+  const SYMS = ['RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','WIPRO','TATAMOTORS','SBIN','ITC','KOTAKBANK','AXISBANK','HCLTECH','BAJFINANCE','MARUTI','SUNPHARMA'];
 
-  const analyze = () => {
-    setLoading(true);
-    axios
-      .get(`${API}/options/${sym}`)
-      .then((r) => {
-        setData(r.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
+  const analyze = () => { setLoading(true); axios.get(`${API}/options/${sym}`).then(r=>{setData(r.data);setLoading(false);}).catch(()=>setLoading(false)); };
 
   return (
     <div>
-      <div style={S.card}>
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "flex-end",
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>
-              Stock
-            </div>
-            <select
-              style={S.select}
-              value={sym}
-              onChange={(e) => setSym(e.target.value)}
-            >
-              {[
-                "RELIANCE",
-                "TCS",
-                "HDFCBANK",
-                "INFY",
-                "ICICIBANK",
-                "WIPRO",
-                "TATAMOTORS",
-                "SBIN",
-                "ITC",
-                "KOTAKBANK",
-                "AXISBANK",
-                "HCLTECH",
-              ].map((s) => (
-                <option key={s}>{s}</option>
-              ))}
+      <Card>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
+          <div style={{flex:1,minWidth:120}}>
+            <div style={{fontSize:10,color:C.text3,marginBottom:4,textTransform:'uppercase',letterSpacing:'.07em'}}>Stock</div>
+            <select style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'8px 10px',fontSize:12,color:C.text,width:'100%'}} value={sym} onChange={e=>setSym(e.target.value)}>
+              {SYMS.map(s=><option key={s}>{s}</option>)}
             </select>
           </div>
-          <button style={S.btn} onClick={analyze}>
-            {loading ? "Analyzing..." : "Analyze options"}
+          <button className="hover-btn" style={{background:C.greenD,border:`1px solid ${C.greenB}`,color:C.green,borderRadius:8,padding:'8px 18px',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}} onClick={analyze}>
+            {loading ? 'Loading...' : 'Analyze'}
           </button>
         </div>
-      </div>
+      </Card>
+
       {data && (
-        <>
-          <div style={S.grid4}>
-            {[
-              ["Spot price", "₹" + fmt(data.spot)],
-              ["ATM strike", "₹" + data.atm_strike],
-              ["Signal", data.signal],
-              ["Recommendation", data.opt_rec],
-            ].map(([l, v]) => (
-              <div key={l} style={S.metric}>
-                <div style={S.mLabel}>{l}</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>
-                  {l === "Signal" || l === "Recommendation" ? (
-                    pill(v)
-                  ) : (
-                    <span style={{ color: "#fff" }}>{v}</span>
-                  )}
-                </div>
-              </div>
-            ))}
+        <div className="fade-up">
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+            <MetCard label="Spot price" value={`₹${fmt(data.spot)}`}/>
+            <MetCard label="ATM strike" value={`₹${data.atm_strike}`}/>
           </div>
-          <div style={S.card}>
-            <div style={S.secTitle}>
-              Options chain — {data.symbol} · {data.expiry}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+            <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:6}}>Signal</div>
+              <Pill type={data.signal||'HOLD'} size="lg"/>
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 80px 1fr",
-                gap: 0,
-                marginBottom: 8,
-              }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4,1fr)",
-                  padding: "6px 10px",
-                  fontSize: 11,
-                  color: "#555",
-                  textAlign: "center",
-                }}
-              >
-                <span>Premium</span>
-                <span>OI</span>
-                <span>Vol</span>
-                <span>IV</span>
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "#555",
-                  textAlign: "center",
-                  padding: "6px 0",
-                }}
-              >
-                Strike
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4,1fr)",
-                  padding: "6px 10px",
-                  fontSize: 11,
-                  color: "#555",
-                  textAlign: "center",
-                }}
-              >
-                <span>Premium</span>
-                <span>OI</span>
-                <span>Vol</span>
-                <span>IV</span>
-              </div>
+            <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:6}}>Recommendation</div>
+              <Pill type={data.opt_rec||'NEUTRAL'} size="lg"/>
             </div>
-            {(data.chain || []).map((row, i) => {
-              const isATM = row.strike === data.atm_strike;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 80px 1fr",
-                    borderBottom: "1px solid #1a1a24",
-                    background: isATM ? "#1c1c2a" : "transparent",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(4,1fr)",
-                      padding: "8px 10px",
-                      background: row.call?.inTheMoney
-                        ? "#0d2018"
-                        : "transparent",
-                      borderRight: "1px solid #2a2a38",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: "#22c55e",
-                        textAlign: "center",
-                        fontSize: 13,
-                      }}
-                    >
-                      ₹{fmt(row.call?.lastPrice)}
-                    </span>
-                    <span
-                      style={{
-                        color: "#666",
-                        textAlign: "center",
-                        fontSize: 11,
-                      }}
-                    >
-                      {row.call?.openInterest
-                        ? (row.call.openInterest / 1000).toFixed(0) + "K"
-                        : "—"}
-                    </span>
-                    <span
-                      style={{
-                        color: "#666",
-                        textAlign: "center",
-                        fontSize: 11,
-                      }}
-                    >
-                      {row.call?.volume || "—"}
-                    </span>
-                    <span
-                      style={{
-                        color: "#666",
-                        textAlign: "center",
-                        fontSize: 11,
-                      }}
-                    >
-                      {row.call?.impliedVolatility
-                        ? (row.call.impliedVolatility * 100).toFixed(1) + "%"
-                        : "—"}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: "8px 4px",
-                      fontWeight: isATM ? 700 : 600,
-                      fontSize: 13,
-                      color: isATM ? "#fff" : "#aaa",
-                      borderRight: "1px solid #2a2a38",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexDirection: "column",
-                    }}
-                  >
-                    {row.strike}
-                    {isATM && (
-                      <span style={{ fontSize: 9, color: "#6c63ff" }}>ATM</span>
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(4,1fr)",
-                      padding: "8px 10px",
-                      background: row.put?.inTheMoney
-                        ? "#200d0d"
-                        : "transparent",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: "#ef4444",
-                        textAlign: "center",
-                        fontSize: 13,
-                      }}
-                    >
-                      ₹{fmt(row.put?.lastPrice)}
-                    </span>
-                    <span
-                      style={{
-                        color: "#666",
-                        textAlign: "center",
-                        fontSize: 11,
-                      }}
-                    >
-                      {row.put?.openInterest
-                        ? (row.put.openInterest / 1000).toFixed(0) + "K"
-                        : "—"}
-                    </span>
-                    <span
-                      style={{
-                        color: "#666",
-                        textAlign: "center",
-                        fontSize: 11,
-                      }}
-                    >
-                      {row.put?.volume || "—"}
-                    </span>
-                    <span
-                      style={{
-                        color: "#666",
-                        textAlign: "center",
-                        fontSize: 11,
-                      }}
-                    >
-                      {row.put?.impliedVolatility
-                        ? (row.put.impliedVolatility * 100).toFixed(1) + "%"
-                        : "—"}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
           </div>
-        </>
+
+          <Card>
+            <div style={{fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10}}>Options chain</div>
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+                <thead>
+                  <tr style={{borderBottom:`1px solid ${C.bdr}`}}>
+                    <th colSpan={2} style={{color:C.green,padding:'4px 8px',textAlign:'center',fontWeight:600}}>CALLS</th>
+                    <th style={{color:C.text2,padding:'4px 8px',textAlign:'center',fontWeight:600}}>Strike</th>
+                    <th colSpan={2} style={{color:C.red,padding:'4px 8px',textAlign:'center',fontWeight:600}}>PUTS</th>
+                  </tr>
+                  <tr style={{borderBottom:`1px solid ${C.bdr}`,fontSize:10,color:C.text3}}>
+                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:500}}>Prem</th>
+                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:500}}>OI</th>
+                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:600,color:C.text2}}>—</th>
+                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:500}}>Prem</th>
+                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:500}}>OI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.chain||[]).map((row,i) => {
+                    const isATM = row.strike === data.atm_strike;
+                    return (
+                      <tr key={i} style={{background:isATM?'rgba(88,166,255,0.05)':'transparent',borderBottom:`1px solid rgba(33,38,45,.5)`}}>
+                        <td style={{padding:'7px 8px',textAlign:'center',color:C.green,...mono,fontWeight:row.call?.inTheMoney?600:400}}>{row.call?.lastPrice?`₹${fmt(row.call.lastPrice)}`:'—'}</td>
+                        <td style={{padding:'7px 8px',textAlign:'center',color:C.text3,...mono,fontSize:10}}>{row.call?.openInterest?`${(row.call.openInterest/1000).toFixed(0)}K`:'—'}</td>
+                        <td style={{padding:'7px 8px',textAlign:'center',color:isATM?C.blue:C.text2,...mono,fontWeight:isATM?700:500}}>
+                          {row.strike}{isATM&&<span style={{fontSize:8,color:C.blue,marginLeft:3}}>ATM</span>}
+                        </td>
+                        <td style={{padding:'7px 8px',textAlign:'center',color:C.red,...mono,fontWeight:row.put?.inTheMoney?600:400}}>{row.put?.lastPrice?`₹${fmt(row.put.lastPrice)}`:'—'}</td>
+                        <td style={{padding:'7px 8px',textAlign:'center',color:C.text3,...mono,fontSize:10}}>{row.put?.openInterest?`${(row.put.openInterest/1000).toFixed(0)}K`:'—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   );
@@ -1645,707 +614,264 @@ function OptionsAdvisor() {
 
 // ── News ──────────────────────────────────────────────────────────────────────
 function NewsFeed() {
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [noKey, setNoKey] = useState(false);
-  const [filter, setFilter] = useState("");
+  const [articles,setArticles] = useState([]);
+  const [loading,setLoading]   = useState(true);
+  const [noKey,setNoKey]       = useState(false);
 
   useEffect(() => {
-    axios
-      .get(`${API}/news`)
-      .then((r) => {
-        if (r.data.note) setNoKey(true);
-        setArticles(r.data.articles || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    axios.get(`${API}/news`).then(r => {
+      if (r.data.note) setNoKey(true);
+      setArticles(r.data.articles||[]);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
-
-  const filtered = filter
-    ? articles.filter(
-        (a) =>
-          a.symbol?.includes(filter.toUpperCase()) ||
-          a.title?.toLowerCase().includes(filter.toLowerCase()),
-      )
-    : articles;
 
   return (
     <div>
       {noKey && (
-        <div
-          style={{
-            ...S.card,
-            borderColor: "#f59e0b",
-            background: "#1e1a0d",
-            marginBottom: 12,
-          }}
-        >
-          <div style={{ fontSize: 13, color: "#f59e0b" }}>
-            Add NEWS_API_KEY to backend/.env for live news. Get free key at{" "}
-            <a href="https://newsapi.org" style={{ color: "#60a5fa" }}>
-              newsapi.org
-            </a>
-          </div>
+        <div style={{background:C.amberD,border:`1px solid #5a4500`,borderRadius:8,padding:'10px 12px',marginBottom:10,fontSize:12,color:C.amber}}>
+          Add <code style={{fontFamily:'JetBrains Mono,monospace',background:'rgba(255,255,255,0.05)',padding:'1px 5px',borderRadius:3}}>NEWS_API_KEY</code> to .env for live news · <a href="https://newsapi.org" style={{color:C.blue}}>newsapi.org</a>
         </div>
       )}
-      <div style={{ marginBottom: 12 }}>
-        <input
-          style={{ ...S.input, width: 200 }}
-          placeholder="Filter..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-      </div>
-      <div style={S.card}>
-        {loading ? (
-          <Spinner />
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: 30, textAlign: "center", color: "#555" }}>
-            No news. Add NEWS_API_KEY to .env
+      <Card>
+        {loading ? <Spinner/> : articles.length===0 ? (
+          <div style={{padding:32,textAlign:'center',color:C.text3,fontSize:12}}>No news. Add NEWS_API_KEY to .env</div>
+        ) : articles.map((a,i) => (
+          <div key={i} style={{padding:'12px 0',borderBottom:i<articles.length-1?`1px solid ${C.bdr}`:'none'}}>
+            <a href={a.url} target="_blank" rel="noreferrer" style={{color:C.text,fontSize:13,lineHeight:1.5,fontWeight:400,display:'block',marginBottom:5}}>{a.title}</a>
+            <div style={{display:'flex',gap:8,fontSize:11,color:C.text3,alignItems:'center',flexWrap:'wrap'}}>
+              <span style={{color:C.text2,fontWeight:500}}>{a.source}</span>
+              <span>·</span>
+              <span>Sent: <span style={{color:a.sentiment>0.65?C.green:a.sentiment<0.4?C.red:C.amber,fontWeight:600,...mono}}>{Math.round(a.sentiment*100)}%</span></span>
+            </div>
           </div>
-        ) : (
-          filtered.map((a, i) => (
-            <div
-              key={i}
-              style={{
-                padding: "12px 0",
-                borderBottom:
-                  i < filtered.length - 1 ? "1px solid #1a1a24" : "none",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 14,
-                  color: "#e2e2e8",
-                  lineHeight: 1.5,
-                  marginBottom: 5,
-                }}
-              >
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: "#e2e2e8", textDecoration: "none" }}
-                >
-                  {a.title}
-                </a>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+// ── Paper Trading ─────────────────────────────────────────────────────────────
+function PaperTrading() {
+  const [stats,setStats]     = useState(null);
+  const [loading,setLoading] = useState(true);
+  const [closing,setClosing] = useState(null);
+  const [exitPrice,setExitPrice] = useState('');
+  const [msg,setMsg]         = useState('');
+
+  const load = useCallback(() => {
+    axios.get(`${API}/paper/stats`).then(r=>{setStats(r.data);setLoading(false);}).catch(()=>setLoading(false));
+  },[]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const closeTrade = async (id) => {
+    if (!exitPrice) return;
+    try {
+      await axios.post(`${API}/paper/trades/${id}/close`, {exit_price:parseFloat(exitPrice),notes:'Manual close'});
+      setClosing(null); setExitPrice('');
+      setMsg('✓ Trade closed'); setTimeout(()=>setMsg(''),3000);
+      load();
+    } catch(e) { setMsg('Failed'); }
+  };
+
+  const deleteTrade = async (id) => {
+    if (!window.confirm('Delete?')) return;
+    await axios.delete(`${API}/paper/trades/${id}`);
+    load();
+  };
+
+  if (loading) return <Spinner/>;
+  const trades = stats?.trades||[];
+  const open   = trades.filter(t=>t.status==='OPEN');
+  const closed = trades.filter(t=>t.status==='CLOSED');
+
+  return (
+    <div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,marginBottom:10}}>
+        <MetCard label="Total trades" value={stats?.total_trades??0}/>
+        <MetCard label="Win rate" value={`${stats?.win_rate??0}%`} accent={stats?.win_rate>50?C.green:null}/>
+        <MetCard label="Total P&L" value={`₹${fmt(stats?.total_pnl??0,0)}`} accent={gc(stats?.total_pnl||0)} subColor={gc(stats?.total_pnl||0)}/>
+        <MetCard label="Open trades" value={stats?.open??0} accent={stats?.open?C.blue:null}/>
+      </div>
+
+      {msg && <div style={{background:C.greenD,border:`1px solid ${C.greenB}`,borderRadius:8,padding:'8px 12px',marginBottom:10,fontSize:12,color:C.green,...mono}}>{msg}</div>}
+
+      {open.length>0 && (
+        <Card style={{marginBottom:10}}>
+          <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',fontWeight:600,marginBottom:10}}>Open trades</div>
+          {open.map(t=>(
+            <div key={t.id} style={{padding:'12px 0',borderBottom:`1px solid ${C.bdr}`}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,flexWrap:'wrap',gap:6}}>
+                <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                  <span style={{fontWeight:700,color:C.text,fontSize:14,...mono}}>{t.sym}</span>
+                  <Pill type={t.signal}/>
+                  <span style={{fontSize:11,color:C.text3,...mono}}>×{t.qty}</span>
+                </div>
+                <span style={{fontSize:11,color:C.text2,...mono}}>₹{fmt(t.entry)}</span>
               </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#555",
-                  display: "flex",
-                  gap: 12,
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ color: "#888", fontWeight: 600 }}>
-                  {a.source}
-                </span>
-                <span>{new Date(a.published).toLocaleDateString("en-IN")}</span>
-                <span>
-                  Sentiment:{" "}
-                  <span
-                    style={{
-                      color:
-                        a.sentiment > 0.65
-                          ? "#22c55e"
-                          : a.sentiment < 0.4
-                            ? "#ef4444"
-                            : "#f59e0b",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {Math.round(a.sentiment * 100)}%
-                  </span>
-                </span>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:8}}>
+                {[['SL',C.red,`₹${fmt(t.stop_loss)}`],['T1',C.green,`₹${fmt(t.target1)}`],['T2',C.green,`₹${fmt(t.target2)}`]].map(([l,c,v])=>(
+                  <div key={l} style={{background:C.bg2,borderRadius:6,padding:'6px 8px',border:`1px solid ${C.bdr}`}}>
+                    <div style={{fontSize:9,color:C.text3,marginBottom:2}}>{l}</div>
+                    <div style={{fontSize:12,fontWeight:600,color:c,...mono}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              {closing===t.id ? (
+                <div style={{display:'flex',gap:6}}>
+                  <input style={{flex:1,background:C.bg3,border:`1px solid ${C.bdr2}`,borderRadius:6,padding:'7px 10px',fontSize:12,color:C.text}} placeholder="Exit price ₹" value={exitPrice} onChange={e=>setExitPrice(e.target.value)}/>
+                  <button style={{background:C.greenD,border:`1px solid ${C.greenB}`,color:C.green,borderRadius:6,padding:'7px 14px',fontSize:12,fontWeight:600,cursor:'pointer'}} onClick={()=>closeTrade(t.id)}>Confirm</button>
+                  <button style={{background:'transparent',border:`1px solid ${C.bdr}`,color:C.text3,borderRadius:6,padding:'7px 10px',fontSize:12,cursor:'pointer'}} onClick={()=>setClosing(null)}>Cancel</button>
+                </div>
+              ) : (
+                <div style={{display:'flex',gap:6}}>
+                  <button style={{flex:1,background:C.bg2,border:`1px solid ${C.bdr2}`,color:C.text2,borderRadius:6,padding:'7px',fontSize:12,cursor:'pointer'}} onClick={()=>setClosing(t.id)}>Close trade</button>
+                  <button style={{background:'transparent',border:`1px solid ${C.redB}`,color:C.red,borderRadius:6,padding:'7px 12px',fontSize:12,cursor:'pointer'}} onClick={()=>deleteTrade(t.id)}>Delete</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {closed.length>0 && (
+        <Card>
+          <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',fontWeight:600,marginBottom:10}}>Closed trades</div>
+          {closed.slice().reverse().map(t=>(
+            <div key={t.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 0',borderBottom:`1px solid rgba(33,38,45,.5)`,flexWrap:'wrap',gap:6}}>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <span style={{fontWeight:700,color:C.text,...mono,fontSize:13}}>{t.sym}</span>
+                <Pill type={t.signal}/>
+              </div>
+              <div style={{display:'flex',gap:12,alignItems:'center'}}>
+                <span style={{color:C.text2,...mono,fontSize:12}}>₹{fmt(t.entry)} → ₹{fmt(t.exit_price)}</span>
+                <span style={{color:gc(t.pnl||0),fontWeight:700,...mono,fontSize:13}}>{(t.pnl||0)>=0?'+':''}₹{fmt(t.pnl||0,0)}</span>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </Card>
+      )}
+
+      {trades.length===0 && (
+        <Card style={{textAlign:'center',padding:40}}>
+          <div style={{fontSize:13,color:C.text2,marginBottom:6}}>No paper trades yet</div>
+          <div style={{fontSize:12,color:C.text3}}>Go to Equity Signals → click a BUY stock → Add to paper trades</div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── Bottom Nav (Mobile) ───────────────────────────────────────────────────────
+function BottomNav({tab, setTab, isMobile}) {
+  if (!isMobile) return null;
+  const tabs = [
+    {k:'equity',icon:'📊',label:'Signals'},
+    {k:'options',icon:'⚡',label:'Options'},
+    {k:'paper',icon:'📈',label:'Paper'},
+    {k:'news',icon:'📰',label:'News'},
+  ];
+  return (
+    <div style={{position:'fixed',bottom:0,left:0,right:0,background:C.bg1,borderTop:`1px solid ${C.bdr}`,display:'flex',zIndex:100,paddingBottom:'env(safe-area-inset-bottom)'}}>
+      {tabs.map(({k,icon,label})=>(
+        <button key={k} onClick={()=>setTab(k)} style={{flex:1,background:'none',border:'none',padding:'10px 4px 8px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+          <span style={{fontSize:18}}>{icon}</span>
+          <span style={{fontSize:10,color:tab===k?C.green:C.text3,fontWeight:tab===k?600:400}}>{label}</span>
+          {tab===k&&<div style={{width:16,height:2,background:C.green,borderRadius:1}}/>}
+        </button>
+      ))}
     </div>
   );
 }
 
 // ── App Root ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab] = useState("equity");
-  const [overview, setOverview] = useState(null);
-  const [selectedStock, setSelectedStock] = useState(null);
-  const [apiOk, setApiOk] = useState(null);
-  const [paperPrefill, setPaperPrefill] = useState(null);
+  const [tab,setTab]           = useState('equity');
+  const [overview,setOverview] = useState(null);
+  const [selected,setSelected] = useState(null);
+  const [apiOk,setApiOk]       = useState(null);
+  const [isMobile,setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    axios
-      .get(`${API}/health`)
-      .then(() => setApiOk(true))
-      .catch(() => setApiOk(false));
-    axios
-      .get(`${API}/market/overview`)
-      .then((r) => setOverview(r.data))
-      .catch(() => {});
-    const t = setInterval(
-      () =>
-        axios
-          .get(`${API}/market/overview`)
-          .then((r) => setOverview(r.data))
-          .catch(() => {}),
-      60000,
-    );
-    return () => clearInterval(t);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const handleAddTrade = (data) => {
-    setPaperPrefill(data);
-    setTab("paper");
-    setSelectedStock(null);
-  };
+  useEffect(() => {
+    axios.get(`${API}/health`).then(()=>setApiOk(true)).catch(()=>setApiOk(false));
+    const loadOv = () => axios.get(`${API}/market/overview`).then(r=>setOverview(r.data)).catch(()=>{});
+    loadOv();
+    const id = setInterval(loadOv, 60000);
+    return () => clearInterval(id);
+  }, []);
 
-  const tabs = [
-    ["equity", "Equity signals"],
-    ["options", "Options chain"],
-    ["paper", "Paper trading"],
-    ["news", "News & sentiment"],
-  ];
+  const desktopTabs = [['equity','Equity signals'],['options','Options'],['paper','Paper trading'],['news','News']];
 
   return (
-    <div style={S.app}>
-      <nav style={S.nav}>
-        <div style={S.logo}>
-          <div style={S.logoDot} />
-          <span>NiftySignal</span>
-          <span style={{ color: T.text3, fontWeight: 300 }}>AI</span>
+    <div style={{minHeight:'100vh',background:C.bg,color:C.text,fontFamily:"'Inter',sans-serif",paddingBottom:isMobile?70:0}}>
+      {/* Nav */}
+      <nav style={{background:'rgba(10,10,15,0.95)',backdropFilter:'blur(16px)',borderBottom:`1px solid ${C.bdr}`,padding:`0 ${isMobile?12:24}px`,display:'flex',alignItems:'center',height:48,position:'sticky',top:0,zIndex:100,gap:isMobile?8:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:6,marginRight:isMobile?'auto':24}}>
+          <div style={{width:7,height:7,borderRadius:'50%',background:C.green,animation:'pulse 2s infinite',flexShrink:0}}/>
+          <span style={{fontSize:14,fontWeight:700,color:C.text,letterSpacing:'-0.3px',whiteSpace:'nowrap'}}>
+            NiftySignal<span style={{color:C.green}}>.</span>AI
+          </span>
         </div>
-        <div style={{ display: "flex", height: "100%" }}>
-          {tabs.map(([k, l]) => (
-            <button
-              key={k}
-              style={S.navBtn(tab === k)}
-              onClick={() => {
-                setTab(k);
-                setSelectedStock(null);
-              }}
-            >
-              {l}
-            </button>
-          ))}
-        </div>
-        <div
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 11,
-            }}
-          >
-            <div
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background:
-                  apiOk === true ? T.green : apiOk === false ? T.red : T.amber,
-                animation: apiOk === true ? "pulse 2s infinite" : "none",
-              }}
-            />
-            <span
-              style={{
-                color:
-                  apiOk === true ? T.green : apiOk === false ? T.red : T.text3,
-              }}
-            >
-              {apiOk === true
-                ? "API connected"
-                : apiOk === false
-                  ? "API offline"
-                  : "connecting..."}
-            </span>
+
+        {!isMobile && (
+          <div style={{display:'flex',height:'100%'}}>
+            {desktopTabs.map(([k,l])=>(
+              <button key={k} style={{padding:'0 14px',height:48,fontSize:12,fontWeight:tab===k?500:400,color:tab===k?C.text:C.text2,cursor:'pointer',border:'none',background:'none',borderBottom:tab===k?`2px solid ${C.green}`:'2px solid transparent',transition:'all .15s',whiteSpace:'nowrap'}} onClick={()=>{setTab(k);setSelected(null);}}>
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:isMobile?8:16}}>
+          {!isMobile && <ISTClock/>}
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <div style={{width:5,height:5,borderRadius:'50%',background:apiOk===true?C.green:apiOk===false?C.red:C.amber}}/>
+            {!isMobile && <span style={{fontSize:11,color:apiOk===true?C.green:apiOk===false?C.red:C.text3,...mono}}>{apiOk===true?'connected':apiOk===false?'offline':'...'}</span>}
           </div>
         </div>
       </nav>
 
-      <div style={S.main}>
-        {apiOk === false && (
-          <div
-            style={{
-              ...S.card,
-              borderColor: T.redBd,
-              background: T.redBg,
-              marginBottom: 12,
-            }}
-          >
-            <div style={{ fontSize: 12, color: T.red }}>
-              Backend not running — run:{" "}
-              <code
-                style={{
-                  fontFamily: "'JetBrains Mono',monospace",
-                  background: "rgba(255,255,255,0.05)",
-                  padding: "1px 6px",
-                  borderRadius: 3,
-                }}
-              >
-                python -m uvicorn main:app --port 8000
-              </code>
-            </div>
+      {/* Main */}
+      <div style={{padding:`12px ${isMobile?12:24}px`,maxWidth:1400,margin:'0 auto'}}>
+        {apiOk===false && (
+          <div style={{background:C.redD,border:`1px solid ${C.redB}`,borderRadius:8,padding:'10px 12px',marginBottom:10,fontSize:12,color:C.red}}>
+            Backend offline — check Railway deployment
           </div>
         )}
 
-        <MarketBanner data={overview} />
-
-        {tab === "equity" &&
-          (selectedStock ? (
-            <StockDetail
-              symbol={selectedStock}
-              onBack={() => setSelectedStock(null)}
-              onAddTrade={handleAddTrade}
-            />
-          ) : (
-            <StocksTable onSelect={setSelectedStock} />
-          ))}
-        {tab === "options" && <OptionsAdvisor />}
-        {tab === "paper" && (
-          <PaperTrading
-            prefill={paperPrefill}
-            onClear={() => setPaperPrefill(null)}
-          />
+        {isMobile && (
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <ISTClock/>
+            <span style={{fontSize:10,color:apiOk===true?C.green:C.red,...mono}}>{apiOk===true?'● connected':'● offline'}</span>
+          </div>
         )}
-        {tab === "news" && <NewsFeed />}
+
+        <MarketBanner data={overview}/>
+
+        {tab==='equity' && (selected
+          ? <StockDetail symbol={selected} onBack={()=>setSelected(null)}/>
+          : <StocksList onSelect={s=>{setSelected(s);}}/>
+        )}
+        {tab==='options' && <OptionsAdvisor/>}
+        {tab==='paper'   && <PaperTrading/>}
+        {tab==='news'    && <NewsFeed/>}
       </div>
 
-      <div
-        style={{
-          textAlign: "center",
-          padding: "16px 24px",
-          borderTop: "1px solid #1e1e28",
-          fontSize: 11,
-          color: "#444",
-        }}
-      >
-        NiftySignal AI · Educational & research purposes only · Not
-        SEBI-registered investment advice · Consult a qualified financial
-        advisor before trading
-      </div>
-    </div>
-  );
-}
+      <BottomNav tab={tab} setTab={(k)=>{setTab(k);setSelected(null);}} isMobile={isMobile}/>
 
-// ── Paper Trading Components (appended) ──────────────────────────────────────
-
-export function TradingPanel({ symbol, onClose }) {
-  const [data, setData] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  const [adding, setAdding] = React.useState(false);
-  const [msg, setMsg] = React.useState("");
-
-  React.useEffect(() => {
-    setLoading(true);
-    axios
-      .get(`${API}/targets/${symbol}`)
-      .then((r) => {
-        setData(r.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [symbol]);
-
-  const addTrade = async () => {
-    if (!data) return;
-    setAdding(true);
-    try {
-      await axios.post(`${API}/paper/trades`, {
-        sym: data.sym,
-        signal: data.signal,
-        price: data.price,
-        stop_loss: data.stop_loss,
-        target1: data.target1,
-        target2: data.target2,
-        confidence: data.confidence || 0.5,
-        notes: `Auto from signal at ${new Date().toLocaleTimeString("en-IN")}`,
-      });
-      setMsg("Trade added to paper tracker!");
-      setTimeout(() => setMsg(""), 3000);
-    } catch (e) {
-      setMsg("Failed to add trade");
-    }
-    setAdding(false);
-  };
-
-  if (loading)
-    return (
-      <div style={S.card}>
-        <Spinner />
-      </div>
-    );
-  if (!data) return null;
-
-  const isLong = data.signal === "BUY";
-  const signalColor = isLong
-    ? "#22c55e"
-    : data.signal === "SELL"
-      ? "#ef4444"
-      : "#f59e0b";
-
-  return (
-    <div style={S.card}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
-      >
-        <div>
-          <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
-            {data.sym}
-          </span>
-          <span style={{ ...S.pill(data.signal), marginLeft: 10 }}>
-            {data.signal}
-          </span>
-          <span style={{ fontSize: 12, color: "#888", marginLeft: 8 }}>
-            Confidence: {Math.round((data.confidence || 0) * 100)}%
-          </span>
-        </div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: "#fff" }}>
-          ₹{fmt(data.price)}
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: 10,
-          marginBottom: 16,
-        }}
-      >
-        {[
-          ["Entry price", `₹${fmt(data.entry)}`, "#fff"],
-          ["Stop loss", `₹${fmt(data.stop_loss)}`, "#ef4444"],
-          ["Target 1", `₹${fmt(data.target1)}`, "#22c55e"],
-          ["Target 2", `₹${fmt(data.target2)}`, "#60a5fa"],
-        ].map(([label, val, color]) => (
-          <div
-            key={label}
-            style={{ background: "#1e1e28", borderRadius: 8, padding: 12 }}
-          >
-            <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>
-              {label}
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color }}>{val}</div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: 10,
-          marginBottom: 16,
-        }}
-      >
-        {[
-          ["Risk", `₹${fmt(data.risk)} (${data.sl_pct}%)`, "#ef4444"],
-          ["Reward", `₹${fmt(data.reward)} (${data.t1_pct}%)`, "#22c55e"],
-          [
-            "R:R Ratio",
-            `1 : ${data.rr_ratio}`,
-            data.rr_ratio >= 1.5 ? "#22c55e" : "#f59e0b",
-          ],
-          ["ATR", data.atr ? `₹${fmt(data.atr)}` : "—", "#888"],
-        ].map(([label, val, color]) => (
-          <div
-            key={label}
-            style={{ background: "#1e1e28", borderRadius: 8, padding: 12 }}
-          >
-            <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>
-              {label}
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 700, color }}>{val}</div>
-          </div>
-        ))}
-      </div>
-
-      {data.pivot && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5,1fr)",
-            gap: 8,
-            marginBottom: 16,
-          }}
-        >
-          {[
-            ["Support 2", data.support2],
-            ["Support 1", data.support1],
-            ["Pivot", data.pivot],
-            ["Resistance 1", data.resistance1],
-            ["Resistance 2", data.resistance2],
-          ].map(([label, val]) => (
-            <div
-              key={label}
-              style={{
-                background: "#16161e",
-                border: "1px solid #2a2a38",
-                borderRadius: 8,
-                padding: 10,
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: 10, color: "#555", marginBottom: 3 }}>
-                {label}
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#aaa" }}>
-                ₹{fmt(val)}
-              </div>
-            </div>
-          ))}
+      {!isMobile && (
+        <div style={{textAlign:'center',padding:'12px 24px',borderTop:`1px solid ${C.bdr}`,fontSize:10,color:C.text3}}>
+          NiftySignal AI · Research purposes only · Not SEBI-registered investment advice
         </div>
       )}
-
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <button
-          style={S.btn}
-          onClick={addTrade}
-          disabled={adding || data.signal === "HOLD"}
-        >
-          {adding ? "Adding..." : `+ Add to paper trades`}
-        </button>
-        {data.signal === "HOLD" && (
-          <span style={{ fontSize: 12, color: "#888" }}>
-            No trade — signal is HOLD
-          </span>
-        )}
-        {msg && <span style={{ fontSize: 12, color: "#22c55e" }}>{msg}</span>}
-      </div>
-      <div style={{ fontSize: 11, color: "#444", marginTop: 10 }}>
-        Stop loss and targets calculated using ATR(14) + pivot point analysis.
-        Not investment advice.
-      </div>
-    </div>
-  );
-}
-
-export function PaperTracker() {
-  const [trades, setTrades] = React.useState([]);
-  const [stats, setStats] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  const [closing, setClosing] = React.useState(null);
-  const [exitPrice, setExitPrice] = React.useState("");
-
-  const load = () => {
-    Promise.all([
-      axios.get(`${API}/paper/trades`),
-      axios.get(`${API}/paper/stats`),
-    ])
-      .then(([tr, st]) => {
-        setTrades(tr.data.trades || []);
-        setStats(st.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
-
-  React.useEffect(() => {
-    load();
-  }, []);
-
-  const closeTrade = async (id) => {
-    if (!exitPrice) return;
-    await axios.post(`${API}/paper/trades/${id}/close`, {
-      exit_price: parseFloat(exitPrice),
-      notes: "Manual close",
-    });
-    setClosing(null);
-    setExitPrice("");
-    load();
-  };
-
-  if (loading) return <Spinner />;
-
-  return (
-    <div>
-      {stats && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4,1fr)",
-            gap: 12,
-            marginBottom: 16,
-          }}
-        >
-          {[
-            ["Total trades", stats.total_trades],
-            ["Win rate", `${stats.win_rate}%`],
-            [
-              "Avg P&L",
-              `${stats.avg_pnl_pct > 0 ? "+" : ""}${stats.avg_pnl_pct}%`,
-            ],
-            ["Open trades", stats.open_trades],
-          ].map(([label, val]) => (
-            <div key={label} style={S.metricCard}>
-              <div style={S.metricLabel}>{label}</div>
-              <div style={{ ...S.metricVal, fontSize: 22 }}>{val}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={S.card}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 14,
-          }}
-        >
-          <span style={S.sectionTitle}>Paper trades</span>
-          <button style={S.btnOutline} onClick={load}>
-            ↺ Refresh
-          </button>
-        </div>
-
-        {trades.length === 0 ? (
-          <div style={{ padding: 30, textAlign: "center", color: "#555" }}>
-            No paper trades yet. Click on a stock → view targets → Add to paper
-            trades.
-          </div>
-        ) : (
-          <div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "70px 80px 80px 80px 80px 80px 1fr 100px",
-                gap: 8,
-                padding: "8px 12px",
-                fontSize: 11,
-                color: "#555",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                borderBottom: "1px solid #2a2a38",
-              }}
-            >
-              <span>Symbol</span>
-              <span>Signal</span>
-              <span>Entry</span>
-              <span>SL</span>
-              <span>T1</span>
-              <span>Current</span>
-              <span>P&L</span>
-              <span>Action</span>
-            </div>
-            {trades.map((t) => {
-              const pnl = t.unrealized_pnl_pct ?? t.pnl_pct;
-              const pnlColor =
-                pnl > 0 ? "#22c55e" : pnl < 0 ? "#ef4444" : "#888";
-              return (
-                <div
-                  key={t.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "70px 80px 80px 80px 80px 80px 1fr 100px",
-                    gap: 8,
-                    padding: "10px 12px",
-                    fontSize: 13,
-                    borderBottom: "1px solid #1a1a24",
-                    alignItems: "center",
-                  }}
-                >
-                  <span style={{ fontWeight: 700, color: "#fff" }}>
-                    {t.sym}
-                  </span>
-                  <span style={S.pill(t.signal)}>{t.signal}</span>
-                  <span>₹{fmt(t.entry)}</span>
-                  <span style={{ color: "#ef4444" }}>₹{fmt(t.stop_loss)}</span>
-                  <span style={{ color: "#22c55e" }}>₹{fmt(t.target1)}</span>
-                  <span style={{ color: "#aaa" }}>
-                    {t.current_price
-                      ? `₹${fmt(t.current_price)}`
-                      : t.exit_price
-                        ? `₹${fmt(t.exit_price)}`
-                        : "—"}
-                  </span>
-                  <span style={{ color: pnlColor, fontWeight: 600 }}>
-                    {pnl != null
-                      ? `${pnl > 0 ? "+" : ""}${pnl.toFixed(2)}%`
-                      : "—"}
-                    {t.status === "OPEN" ? (
-                      <span
-                        style={{ fontSize: 10, color: "#666", marginLeft: 6 }}
-                      >
-                        unrealized
-                      </span>
-                    ) : (
-                      <span
-                        style={{ fontSize: 10, color: "#555", marginLeft: 6 }}
-                      >
-                        closed
-                      </span>
-                    )}
-                  </span>
-                  <div>
-                    {t.status === "OPEN" ? (
-                      closing === t.id ? (
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <input
-                            style={{
-                              ...S.input,
-                              width: 80,
-                              padding: "4px 8px",
-                              fontSize: 12,
-                            }}
-                            placeholder="Exit ₹"
-                            value={exitPrice}
-                            onChange={(e) => setExitPrice(e.target.value)}
-                          />
-                          <button
-                            style={{
-                              ...S.btn,
-                              padding: "4px 8px",
-                              fontSize: 11,
-                            }}
-                            onClick={() => closeTrade(t.id)}
-                          >
-                            OK
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          style={S.btnOutline}
-                          onClick={() => setClosing(t.id)}
-                        >
-                          Close
-                        </button>
-                      )
-                    ) : (
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: t.pnl > 0 ? "#22c55e" : "#ef4444",
-                        }}
-                      >
-                        {t.outcome?.replace(/_/g, " ")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
