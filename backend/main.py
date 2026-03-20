@@ -3,16 +3,90 @@ from fastapi.middleware.cors import CORSMiddleware
 import yfinance as yf
 import pandas as pd
 import requests
-import os, math, time, json
-from datetime import datetime
+import os, math, time, json, threading
+from datetime import datetime, date
 from pathlib import Path
 from dotenv import load_dotenv
 from typing import Optional
+import pytz
+import schedule
 
 load_dotenv()
 
+# Import multi-source data fetcher
+try:
+    from nse_data import fetch_stock_full, calc_rsi, calc_macd, calc_ema, get_historical_data
+    USE_MULTI_SOURCE = True
+except ImportError:
+    USE_MULTI_SOURCE = False
+
 app = FastAPI(title="NiftySignal AI", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+IST = pytz.timezone("Asia/Kolkata")
+
+def is_market_hours():
+    now = datetime.now(IST)
+    if now.weekday() >= 5: return False
+    h, m = now.hour, now.minute
+    return (h == 9 and m >= 15) or (10 <= h <= 14) or (h == 15 and m <= 30)
+
+def background_scheduler():
+    """Runs in background thread — auto-fetches data during market hours"""
+    import logging
+    log = logging.getLogger("bg_scheduler")
+
+    def run_fetch():
+        if not is_market_hours():
+            return
+        log.info("BG scheduler: fetching stocks...")
+        stocks = []
+        for stock in NIFTY50:
+            try:
+                s = fetch_live_stock(stock["sym"], stock["name"], stock["sector"])
+                stocks.append(s)
+                time.sleep(0.2)
+            except Exception as e:
+                stocks.append({"sym": stock["sym"].replace(".NS",""), "name": stock["name"], "sector": stock["sector"], "error": str(e)})
+        if stocks:
+            with open(DATA_DIR / "stocks_latest.json", "w") as f:
+                json.dump(stocks, f, default=str)
+            mem_set("stocks_all", stocks)
+            log.info(f"BG scheduler: saved {len(stocks)} stocks")
+
+        # Also refresh indices
+        indices = {"NIFTY50":"^NSEI","BANKNIFTY":"^NSEBANK","SENSEX":"^BSESN","NIFTYMIDCAP":"^NSEMDCP50","VIX":"^INDIAVIX"}
+        result = {}
+        for name, ticker in indices.items():
+            try:
+                t = yf.Ticker(ticker)
+                hist = t.history(period="2d")
+                if len(hist) >= 2:
+                    prev = float(hist["Close"].iloc[-2]); curr = float(hist["Close"].iloc[-1])
+                    chg = round(curr-prev,2); chg_pct = round((chg/prev)*100,2)
+                elif len(hist) == 1:
+                    curr = float(hist["Close"].iloc[-1]); chg = chg_pct = 0
+                else: curr = chg = chg_pct = 0
+                result[name] = {"value": round(curr,2), "change": chg, "change_pct": chg_pct, "direction": "up" if chg>=0 else "down"}
+            except: pass
+        if result:
+            result["last_updated"] = datetime.now().isoformat()
+            with open(DATA_DIR / "indices_latest.json", "w") as f:
+                json.dump(result, f)
+            mem_set("overview", result)
+
+    schedule.every(5).minutes.do(run_fetch)
+    schedule.every().day.at("09:15").do(run_fetch)
+
+    log.info("Background scheduler started — auto-refreshes every 5 min during market hours")
+    while True:
+        schedule.run_pending()
+        time.sleep(30)
+
+@app.on_event("startup")
+def start_background_scheduler():
+    t = threading.Thread(target=background_scheduler, daemon=True)
+    t.start()
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY", "")
 DATA_DIR = Path("data")
