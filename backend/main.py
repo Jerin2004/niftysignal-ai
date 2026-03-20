@@ -277,51 +277,57 @@ def get_news_sentiment(symbol, name):
 
 # ── Core stock fetch ──────────────────────────────────────────────────────────
 def fetch_live_stock(sym, name, sector):
-    t = yf.Ticker(sym)
-    hist = t.history(period="90d", interval="1d")
-    if hist.empty or len(hist) < 10: raise ValueError(f"Not enough data for {sym}")
-    close, high, low, volume = hist["Close"], hist["High"], hist["Low"], hist["Volume"]
-    curr = round(float(close.iloc[-1]), 2)
-    prev = round(float(close.iloc[-2]), 2)
-    chg = round(curr - prev, 2)
-    chg_pct = round((chg/prev)*100, 2)
+    """Fetch stock data using stooq — works from any IP worldwide"""
+    symbol = sym.replace(".NS", "")
+    from nse_data import fetch_stock_full
+    try:
+        base = fetch_stock_full(symbol, name, sector)
+        sent = get_news_sentiment(symbol, name)
+        signal, conf = compute_signal(base.get("rsi"), base.get("macd_diff"), base.get("price_vs_ema20"), sent)
 
-    rsi       = calc_rsi(close)
-    macd_diff = calc_macd(close)
-    ema20     = calc_ema(close, 20)
-    pve       = round((curr - ema20)/ema20, 4) if ema20 else None
-    bb_pct    = calc_bb_pct(close)
-    atr       = calc_atr(high, low, close)
-    levels    = calc_levels(close, high, low)
-    sent      = get_news_sentiment(sym.replace(".NS",""), name)
-    signal, conf = compute_signal(rsi, macd_diff, pve, sent)
-    targets   = calc_targets(curr, signal, atr, levels)
+        # Calculate targets using trading engine
+        curr = base["price"]
+        hist = None
+        try:
+            from nse_data import get_data
+            hist = get_data(symbol)
+        except: pass
 
-    return {
-        "sym": sym.replace(".NS",""), "name": name, "sector": sector,
-        "price": curr, "prev_close": prev, "change": chg, "change_pct": chg_pct,
-        "volume": round(float(volume.iloc[-1])/1e5, 1),
-        "avg_volume": round(float(volume.rolling(20).mean().iloc[-1])/1e5, 1),
-        "rsi": rsi, "macd_diff": round(macd_diff,3) if macd_diff else None,
-        "price_vs_ema20": pve, "bb_pct": bb_pct, "sentiment": sent,
-        "signal": signal, "confidence": conf,
-        "opt_rec": "CALL" if signal=="BUY" else "PUT" if signal=="SELL" else "NEUTRAL",
-        "week_high": round(float(close.rolling(52).max().iloc[-1]),2),
-        "week_low":  round(float(close.rolling(52).min().iloc[-1]),2),
-        "entry":     targets["entry"],
-        "stop_loss": targets["stop_loss"],
-        "target1":   targets["target1"],
-        "target2":   targets["target2"],
-        "target3":   targets["target3"],
-        "risk":      targets["risk"],
-        "reward":    targets["reward"],
-        "rr_ratio":  targets["rr_ratio"],
-        "atr":       atr,
-        "support":   levels.get("s1"),
-        "resistance":levels.get("r1"),
-        "pivot":     levels.get("pivot"),
-        "last_updated": datetime.now().isoformat(), "source": "live"
-    }
+        atr = levels = None
+        if hist is not None:
+            close_col = next((c for c in hist.columns if c.lower()=="close"), None)
+            high_col  = next((c for c in hist.columns if c.lower()=="high"), None)
+            low_col   = next((c for c in hist.columns if c.lower()=="low"), None)
+            if close_col and high_col and low_col:
+                close = hist[close_col].dropna()
+                high  = hist[high_col].dropna()
+                low   = hist[low_col].dropna()
+                atr    = calc_atr(high, low, close)
+                levels = calc_levels(close, high, low)
+
+        targets = calc_targets(curr, signal, atr or 0, levels or {})
+
+        base.update({
+            "sentiment": sent, "signal": signal, "confidence": conf,
+            "opt_rec": "CALL" if signal=="BUY" else "PUT" if signal=="SELL" else "NEUTRAL",
+            "bb_pct": None,
+            "entry":     targets.get("entry"),
+            "stop_loss": targets.get("stop_loss"),
+            "target1":   targets.get("target1"),
+            "target2":   targets.get("target2"),
+            "target3":   targets.get("target3"),
+            "risk":      targets.get("risk"),
+            "reward":    targets.get("reward"),
+            "rr_ratio":  targets.get("rr_ratio"),
+            "atr":       atr,
+            "support":   levels.get("s1") if levels else None,
+            "resistance":levels.get("r1") if levels else None,
+            "pivot":     levels.get("pivot") if levels else None,
+            "source":    "stooq"
+        })
+        return base
+    except Exception as e:
+        raise ValueError(f"Failed to fetch {symbol}: {e}")
 
 # ── API Routes ────────────────────────────────────────────────────────────────
 @app.get("/api/health")
