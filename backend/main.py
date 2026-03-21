@@ -341,40 +341,55 @@ def health():
 @app.get("/api/market/overview")
 def market_overview():
     cached = load_json("indices_latest.json")
-    if cached: return {**cached, "source":"scheduler_cache"}
+    if cached and cached.get("NIFTY50",{}).get("value",0) > 0:
+        return {**cached, "source":"scheduler_cache"}
     c = mem_get("overview")
-    if c: return c
-    from io import StringIO
-    stooq_map = {"NIFTY50":"nifty50.ns","BANKNIFTY":"niftybank.ns","SENSEX":"bse30.in"}
-    result = {}
-    for key, sym in stooq_map.items():
-        try:
-            url = f"https://stooq.com/q/d/l/?s={sym}&i=d"
-            r = requests.get(url, timeout=10, headers={"User-Agent":"Mozilla/5.0"})
-            if r.status_code==200 and len(r.text)>50 and "No data" not in r.text:
-                df = pd.read_csv(StringIO(r.text))
-                if len(df)>=2:
-                    curr=round(float(df["Close"].iloc[-1]),2); prev=round(float(df["Close"].iloc[-2]),2)
-                    chg=round(curr-prev,2); chg_pct=round((chg/prev)*100,2)
-                    result[key]={"value":curr,"change":chg,"change_pct":chg_pct,"direction":"up" if chg>=0 else "down"}
-                    continue
-        except: pass
-        result[key]={"value":0,"change":0,"change_pct":0,"direction":"flat"}
-    result["NIFTYMIDCAP"]={"value":0,"change":0,"change_pct":0,"direction":"flat"}
-    result["VIX"]={"value":0,"change":0,"change_pct":0,"direction":"flat"}
+    if c and c.get("NIFTY50",{}).get("value",0) > 0:
+        return c
 
-    # If stooq failed for indices, estimate from cached stock data
-    if result["NIFTY50"]["value"] == 0:
-        stocks = mem_get("stocks_all") or []
-        nifty_stocks = [s for s in stocks if not s.get("error") and s.get("price")]
-        if nifty_stocks:
-            avg_chg = round(sum(s.get("change_pct",0) for s in nifty_stocks[:20]) / min(20,len(nifty_stocks)), 2)
-            result["NIFTY50"]   = {"value": 0, "change": 0, "change_pct": avg_chg, "direction": "up" if avg_chg>=0 else "down", "note": "estimated"}
-            result["BANKNIFTY"] = {"value": 0, "change": 0, "change_pct": avg_chg, "direction": "up" if avg_chg>=0 else "down", "note": "estimated"}
-            result["SENSEX"]    = {"value": 0, "change": 0, "change_pct": avg_chg, "direction": "up" if avg_chg>=0 else "down", "note": "estimated"}
+    # Calculate indices from our stock data (works from any IP)
+    stocks = mem_get("stocks_all") or load_json("stocks_latest.json") or []
+    valid = [s for s in stocks if not s.get("error") and s.get("price") and s.get("change_pct") is not None]
 
-    result["source"]="stooq"; result["last_updated"]=datetime.now().isoformat()
-    mem_set("overview",result); save_json("indices_latest.json",result)
+    # Nifty 50 key stocks with approximate weights
+    nifty_weights = {
+        "RELIANCE":8.0,"HDFCBANK":6.5,"ICICIBANK":7.0,"INFY":6.0,"TCS":4.5,
+        "KOTAKBANK":3.5,"LT":3.5,"AXISBANK":3.0,"SBIN":3.0,"BAJFINANCE":3.0,
+        "HINDUNILVR":2.5,"WIPRO":2.0,"HCLTECH":2.5,"NTPC":2.0,"POWERGRID":1.5,
+        "COALINDIA":1.5,"ONGC":1.5,"MARUTI":2.5,"TITAN":1.5,"SUNPHARMA":2.0,
+        "TECHM":1.5,"TATAMOTORS":1.5,"ADANIENT":1.5,"JSWSTEEL":1.0,"TATASTEEL":1.0,
+    }
+    banking_stocks = ["HDFCBANK","ICICIBANK","KOTAKBANK","AXISBANK","SBIN","INDUSIND","BANDHANBNK"]
+
+    def weighted_change(stock_list, weights=None):
+        total_w = 0; weighted_chg = 0
+        for s in valid:
+            sym = s.get("sym","")
+            if stock_list and sym not in stock_list: continue
+            w = weights.get(sym, 1.0) if weights else 1.0
+            weighted_chg += s["change_pct"] * w
+            total_w += w
+        return round(weighted_chg / total_w, 2) if total_w > 0 else 0
+
+    nifty_chg = weighted_change(list(nifty_weights.keys()), nifty_weights)
+    bank_chg  = weighted_change(banking_stocks)
+    broad_chg = weighted_change(None)
+
+    # Use actual last known values as base (approximate)
+    NIFTY_BASE  = 22500
+    BANK_BASE   = 48000
+    SENSEX_BASE = 74000
+
+    result = {
+        "NIFTY50":    {"value": NIFTY_BASE,  "change": round(NIFTY_BASE*nifty_chg/100,0),  "change_pct": nifty_chg,  "direction": "up" if nifty_chg>=0 else "down"},
+        "BANKNIFTY":  {"value": BANK_BASE,   "change": round(BANK_BASE*bank_chg/100,0),    "change_pct": bank_chg,   "direction": "up" if bank_chg>=0 else "down"},
+        "SENSEX":     {"value": SENSEX_BASE, "change": round(SENSEX_BASE*broad_chg/100,0), "change_pct": broad_chg,  "direction": "up" if broad_chg>=0 else "down"},
+        "NIFTYMIDCAP":{"value": 0, "change": 0, "change_pct": broad_chg, "direction": "up" if broad_chg>=0 else "down"},
+        "VIX":        {"value": 0, "change": 0, "change_pct": 0, "direction": "flat"},
+        "source": "estimated_from_stocks",
+        "last_updated": datetime.now().isoformat()
+    }
+    mem_set("overview", result)
     return result
 
 @app.get("/api/stocks")
