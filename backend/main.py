@@ -362,6 +362,17 @@ def market_overview():
         result[key]={"value":0,"change":0,"change_pct":0,"direction":"flat"}
     result["NIFTYMIDCAP"]={"value":0,"change":0,"change_pct":0,"direction":"flat"}
     result["VIX"]={"value":0,"change":0,"change_pct":0,"direction":"flat"}
+
+    # If stooq failed for indices, estimate from cached stock data
+    if result["NIFTY50"]["value"] == 0:
+        stocks = mem_get("stocks_all") or []
+        nifty_stocks = [s for s in stocks if not s.get("error") and s.get("price")]
+        if nifty_stocks:
+            avg_chg = round(sum(s.get("change_pct",0) for s in nifty_stocks[:20]) / min(20,len(nifty_stocks)), 2)
+            result["NIFTY50"]   = {"value": 0, "change": 0, "change_pct": avg_chg, "direction": "up" if avg_chg>=0 else "down", "note": "estimated"}
+            result["BANKNIFTY"] = {"value": 0, "change": 0, "change_pct": avg_chg, "direction": "up" if avg_chg>=0 else "down", "note": "estimated"}
+            result["SENSEX"]    = {"value": 0, "change": 0, "change_pct": avg_chg, "direction": "up" if avg_chg>=0 else "down", "note": "estimated"}
+
     result["source"]="stooq"; result["last_updated"]=datetime.now().isoformat()
     mem_set("overview",result); save_json("indices_latest.json",result)
     return result
@@ -393,23 +404,37 @@ def get_all_stocks(sector: Optional[str]=Query(None), force_refresh: bool=False)
 
 @app.get("/api/stock/{symbol}")
 def get_stock_detail(symbol: str):
-    sym_ns = symbol.upper()+".NS"
+    sym = symbol.upper()
+    # Try cache first
     cached = load_json("stocks_latest.json")
-    base = next((s for s in (cached or []) if s.get("sym")==symbol.upper()), None)
+    base = next((s for s in (cached or []) if s.get("sym")==sym), None)
+    mem_stocks = mem_get("stocks_all") or []
     if not base:
-        meta = next((s for s in NIFTY50 if s["sym"]==sym_ns), {"sym":sym_ns,"name":symbol,"sector":"Unknown"})
-        try: base = fetch_live_stock(sym_ns, meta["name"], meta["sector"])
-        except Exception as e: raise HTTPException(status_code=500, detail=str(e))
+        base = next((s for s in mem_stocks if s.get("sym")==sym), None)
+    if not base or base.get("error"):
+        meta = next((s for s in NIFTY50 if s["sym"].replace(".NS","")==sym), {"sym":sym+".NS","name":sym,"sector":"Unknown"})
+        try:
+            base = fetch_live_stock(meta["sym"], meta["name"], meta["sector"])
+        except Exception as e:
+            raise HTTPException(status_code=404, detail=f"Failed to load {sym}: {str(e)}")
+
+    # Get chart data from stooq
     try:
-        t = yf.Ticker(sym_ns); info = t.info
-        base.update({"market_cap":info.get("marketCap"),"pe_ratio":info.get("trailingPE"),
-                     "pb_ratio":info.get("priceToBook"),"dividend_yield":info.get("dividendYield"),
-                     "eps":info.get("trailingEps"),"beta":info.get("beta")})
-        hist = t.history(period="1y", interval="1d")
-        base["chart"]=[{"date":str(idx.date()),"open":round(float(r["Open"]),2),"high":round(float(r["High"]),2),
-                         "low":round(float(r["Low"]),2),"close":round(float(r["Close"]),2),"volume":int(r["Volume"])}
-                        for idx,r in hist.iterrows()]
-    except Exception as e: base["fundamentals_error"]=str(e)
+        from nse_data import get_data
+        hist = get_data(sym)
+        if hist is not None:
+            close_col = next((c for c in hist.columns if c.lower()=="close"), None)
+            if close_col:
+                base["chart"] = [
+                    {"date": str(idx.date()), "close": round(float(row[close_col]), 2)}
+                    for idx, row in hist.iterrows()
+                    if not pd.isna(row[close_col])
+                ]
+    except Exception as e:
+        base["chart_error"] = str(e)
+
+    base["pe_ratio"] = None
+    base["beta"] = None
     return base
 
 @app.get("/api/options/{symbol}")
@@ -459,17 +484,37 @@ def _synth_options(symbol, spot):
 
 @app.get("/api/chart/{symbol}")
 def get_chart(symbol: str, period: str="3mo", interval: str="1d"):
-    c = mem_get(f"chart_{symbol}_{period}_{interval}", 900)
+    sym = symbol.upper()
+    cache_key = f"chart_{sym}_{period}_{interval}"
+    c = mem_get(cache_key)
     if c: return c
     try:
-        t = yf.Ticker(symbol.upper()+".NS"); hist = t.history(period=period, interval=interval)
-        if hist.empty: raise HTTPException(status_code=404, detail="No chart data")
-        data=[{"date":str(idx.date()) if interval=="1d" else str(idx),
-               "open":round(float(r["Open"]),2),"high":round(float(r["High"]),2),
-               "low":round(float(r["Low"]),2),"close":round(float(r["Close"]),2),"volume":int(r["Volume"])}
-              for idx,r in hist.iterrows()]
-        result={"symbol":symbol,"period":period,"interval":interval,"data":data}
-        mem_set(f"chart_{symbol}_{period}_{interval}", result)
+        from nse_data import get_data
+        # Map period to days
+        period_days = {"1mo":30,"3mo":90,"6mo":180,"1y":365}.get(period, 90)
+        hist = get_data(sym)
+        if hist is None:
+            raise HTTPException(status_code=404, detail=f"No chart data for {sym}")
+        close_col = next((c for c in hist.columns if c.lower()=="close"), None)
+        open_col  = next((c for c in hist.columns if c.lower()=="open"), None)
+        high_col  = next((c for c in hist.columns if c.lower()=="high"), None)
+        low_col   = next((c for c in hist.columns if c.lower()=="low"), None)
+        vol_col   = next((c for c in hist.columns if c.lower()=="volume"), None)
+        if not close_col:
+            raise HTTPException(status_code=404, detail="No close price data")
+        # Filter by period
+        hist = hist.tail(period_days)
+        data = []
+        for idx, row in hist.iterrows():
+            if pd.isna(row[close_col]): continue
+            entry = {"date": str(idx.date()), "close": round(float(row[close_col]), 2)}
+            if open_col and not pd.isna(row.get(open_col)): entry["open"] = round(float(row[open_col]), 2)
+            if high_col and not pd.isna(row.get(high_col)): entry["high"] = round(float(row[high_col]), 2)
+            if low_col  and not pd.isna(row.get(low_col)):  entry["low"]  = round(float(row[low_col]),  2)
+            if vol_col  and not pd.isna(row.get(vol_col)):  entry["volume"] = int(row[vol_col])
+            data.append(entry)
+        result = {"symbol": sym, "period": period, "interval": interval, "data": data}
+        mem_set(cache_key, result)
         return result
     except HTTPException: raise
     except Exception as e: raise HTTPException(status_code=500, detail=str(e))
@@ -517,29 +562,48 @@ class CloseIn(BaseModel):
 
 @app.get("/api/trade-plan/{symbol}")
 def get_trade_plan(symbol: str, capital: float = Query(100000)):
-    sym_ns = symbol.upper() + ".NS"
+    sym = symbol.upper()
     try:
-        t = yf.Ticker(sym_ns)
-        hist = t.history(period="90d", interval="1d")
-        if hist.empty or len(hist) < 10:
-            raise HTTPException(status_code=404, detail="Not enough data")
-        close = hist["Close"]; high = hist["High"]; low = hist["Low"]
-        curr = round(float(close.iloc[-1]), 2)
-        atr = calc_atr(high, low, close)
-        support, resistance = calc_support_resistance(close, high, low)
+        # Get from cache first
         cached = load_json("stocks_latest.json") or []
-        sig_data = next((s for s in cached if s.get("sym") == symbol.upper()), None)
+        sig_data = next((s for s in cached if s.get("sym") == sym), None)
         if not sig_data:
-            meta = next((s for s in NIFTY50 if s["sym"]==sym_ns),
-                        {"sym":sym_ns,"name":symbol,"sector":"Unknown"})
-            sig_data = fetch_live_stock(sym_ns, meta["name"], meta["sector"])
+            mem_stocks = mem_get("stocks_all") or []
+            sig_data = next((s for s in mem_stocks if s.get("sym") == sym), None)
+        if not sig_data or sig_data.get("error"):
+            meta = next((s for s in NIFTY50 if s["sym"].replace(".NS","")==sym),
+                        {"sym":sym+".NS","name":sym,"sector":"Unknown"})
+            sig_data = fetch_live_stock(meta["sym"], meta["name"], meta["sector"])
+
+        curr = sig_data.get("price", 0)
         signal = sig_data.get("signal", "HOLD")
+
+        # Get historical data via stooq for ATR/levels
+        from nse_data import get_data
+        hist = get_data(sym)
+        atr = sig_data.get("atr", 0)
+        support = sig_data.get("support", curr * 0.95)
+        resistance = sig_data.get("resistance", curr * 1.05)
+
+        if hist is not None:
+            close_col = next((c for c in hist.columns if c.lower()=="close"), None)
+            high_col  = next((c for c in hist.columns if c.lower()=="high"), None)
+            low_col   = next((c for c in hist.columns if c.lower()=="low"), None)
+            if close_col and high_col and low_col:
+                atr = calc_atr(hist[high_col], hist[low_col], hist[close_col]) or atr
+                support, resistance = calc_support_resistance(hist[close_col], hist[high_col], hist[low_col])
+
         levels = calc_trade_levels(curr, signal, atr, support, resistance)
         position = calc_position_size(capital, curr, levels["stop_loss"]) if levels.get("stop_loss") else None
-        return {"symbol": symbol.upper(), "current_price": curr, "signal": signal,
-                "confidence": sig_data.get("confidence"), "sentiment": sig_data.get("sentiment"),
-                "rsi": sig_data.get("rsi"), **levels, "position_sizing": position,
-                "capital": capital, "generated_at": datetime.now().isoformat()}
+
+        return {
+            "symbol": sym, "current_price": curr, "signal": signal,
+            "confidence": sig_data.get("confidence"),
+            "sentiment":  sig_data.get("sentiment"),
+            "rsi": sig_data.get("rsi"),
+            **levels, "position_sizing": position,
+            "capital": capital, "generated_at": datetime.now().isoformat()
+        }
     except HTTPException: raise
     except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
