@@ -374,7 +374,7 @@ def market_overview():
             result["SENSEX"]    = {"value": 0, "change": 0, "change_pct": avg_chg, "direction": "up" if avg_chg>=0 else "down", "note": "estimated"}
 
     result["source"]="stooq"; result["last_updated"]=datetime.now().isoformat()
-    mem_set("overview",result); save_json("indices_latest.json",result)
+    mem_set("overview",result)
     return result
 
 @app.get("/api/stocks")
