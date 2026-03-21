@@ -344,20 +344,26 @@ def market_overview():
     if cached: return {**cached, "source":"scheduler_cache"}
     c = mem_get("overview")
     if c: return c
-    indices = {"NIFTY50":"^NSEI","BANKNIFTY":"^NSEBANK","SENSEX":"^BSESN","NIFTYMIDCAP":"^NSEMDCP50","VIX":"^INDIAVIX"}
+    from io import StringIO
+    stooq_map = {"NIFTY50":"nifty50.ns","BANKNIFTY":"niftybank.ns","SENSEX":"bse30.in"}
     result = {}
-    for name, ticker in indices.items():
+    for key, sym in stooq_map.items():
         try:
-            t = yf.Ticker(ticker); hist = t.history(period="2d")
-            if len(hist) >= 2:
-                prev=float(hist["Close"].iloc[-2]); curr=float(hist["Close"].iloc[-1])
-                chg=round(curr-prev,2); chg_pct=round((chg/prev)*100,2)
-            elif len(hist)==1: curr=float(hist["Close"].iloc[-1]); chg=chg_pct=0
-            else: curr=chg=chg_pct=0
-            result[name]={"value":round(curr,2),"change":chg,"change_pct":chg_pct,"direction":"up" if chg>=0 else "down"}
-        except Exception as e: result[name]={"value":0,"change":0,"change_pct":0,"direction":"flat","error":str(e)}
-    result["source"]="live"; result["last_updated"]=datetime.now().isoformat()
-    mem_set("overview", result)
+            url = f"https://stooq.com/q/d/l/?s={sym}&i=d"
+            r = requests.get(url, timeout=10, headers={"User-Agent":"Mozilla/5.0"})
+            if r.status_code==200 and len(r.text)>50 and "No data" not in r.text:
+                df = pd.read_csv(StringIO(r.text))
+                if len(df)>=2:
+                    curr=round(float(df["Close"].iloc[-1]),2); prev=round(float(df["Close"].iloc[-2]),2)
+                    chg=round(curr-prev,2); chg_pct=round((chg/prev)*100,2)
+                    result[key]={"value":curr,"change":chg,"change_pct":chg_pct,"direction":"up" if chg>=0 else "down"}
+                    continue
+        except: pass
+        result[key]={"value":0,"change":0,"change_pct":0,"direction":"flat"}
+    result["NIFTYMIDCAP"]={"value":0,"change":0,"change_pct":0,"direction":"flat"}
+    result["VIX"]={"value":0,"change":0,"change_pct":0,"direction":"flat"}
+    result["source"]="stooq"; result["last_updated"]=datetime.now().isoformat()
+    mem_set("overview",result); save_json("indices_latest.json",result)
     return result
 
 @app.get("/api/stocks")
