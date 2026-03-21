@@ -306,7 +306,7 @@ function StocksList({onSelect}) {
 
   const loadStocks = useCallback((force=false) => {
     const url = force ? `${API}/stocks?force_refresh=true` : `${API}/stocks`;
-    axios.get(url).then(r => {
+    axios.get(url, {timeout: 15000}).then(r => {
       const ns = r.data.stocks || r.data || [];
       const valid = ns.filter(s => !s.error);
       const newAlerts = [];
@@ -324,7 +324,10 @@ function StocksList({onSelect}) {
       }
       setStocks(ns);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch((err) => {
+      console.log('Stocks fetch error:', err.message);
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {

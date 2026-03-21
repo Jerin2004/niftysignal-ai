@@ -374,7 +374,7 @@ def market_overview():
             result["SENSEX"]    = {"value": 0, "change": 0, "change_pct": avg_chg, "direction": "up" if avg_chg>=0 else "down", "note": "estimated"}
 
     result["source"]="stooq"; result["last_updated"]=datetime.now().isoformat()
-    mem_set("overview",result)
+    mem_set("overview",result); save_json("indices_latest.json",result)
     return result
 
 @app.get("/api/stocks")
@@ -389,7 +389,7 @@ def get_all_stocks(sector: Optional[str]=Query(None), force_refresh: bool=False)
     if c:
         stocks = [s for s in c if not sector or sector=="all" or s.get("sector","")==sector]
         return {"stocks":stocks,"source":"memory_cache"}
-    # No cache yet — return loading state with helpful message
+    # No cache yet — trigger background fetch and return empty
     if c and not force_refresh:
         return {"stocks":[s for s in c if not sector or sector=="all" or s.get("sector","")==sector],"source":"memory_cache"}
     stocks = []
