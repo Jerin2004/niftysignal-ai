@@ -1,386 +1,334 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const API = import.meta.env.VITE_API_URL || 'https://nifty-ai-production.up.railway.app/api';
 
-// ── Global CSS ────────────────────────────────────────────────────────────────
+// ─── Global CSS ───────────────────────────────────────────────────────────────
 const injectCSS = () => {
   if (document.getElementById('ns-css')) return;
-  const el = document.createElement('style');
-  el.id = 'ns-css';
-  el.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { font-size: 14px; -webkit-text-size-adjust: 100%; }
-    body { font-family: 'Inter', -apple-system, sans-serif; background: #0a0a0f; color: #c9d1d9; line-height: 1.5; overflow-x: hidden; }
-    ::-webkit-scrollbar { width: 3px; height: 3px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
-    input, select, button, textarea { font-family: inherit; }
-    input:focus, select:focus { outline: none; }
-    a { color: inherit; text-decoration: none; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-    @keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
-    .fade-up { animation: fadeUp .2s ease both; }
-    .hover-row:hover { background: rgba(255,255,255,0.03) !important; }
-    .hover-btn:hover { opacity: 0.85; }
-    @media (max-width: 768px) {
-      html { font-size: 13px; }
-    }
+  const s = document.createElement('style');
+  s.id = 'ns-css';
+  s.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{font-size:13px;-webkit-text-size-adjust:100%;}
+    body{font-family:'IBM Plex Sans',sans-serif;background:#050608;color:#C8D4E0;line-height:1.5;overflow-x:hidden;}
+    ::-webkit-scrollbar{width:2px;height:2px;}
+    ::-webkit-scrollbar-thumb{background:#1A2332;}
+    input,select,button{font-family:inherit;}
+    input:focus,select:focus{outline:none;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+    @keyframes blink{0%,100%{opacity:1}49%{opacity:1}50%{opacity:0}}
+    .fu{animation:fadeUp .18s ease both;}
+    .rh:hover{background:rgba(255,255,255,.025)!important;}
+    .btn:hover{filter:brightness(1.2);}
+    @media(max-width:768px){html{font-size:12px;}}
   `;
-  document.head.appendChild(el);
+  document.head.appendChild(s);
 };
 injectCSS();
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
-  bg:     '#0a0a0f',
-  bg1:    '#0d1117',
-  bg2:    '#161b22',
-  bg3:    '#1c2128',
-  bdr:    '#21262d',
-  bdr2:   '#30363d',
-  text:   '#e6edf3',
-  text2:  '#8b949e',
-  text3:  '#484f58',
-  green:  '#3fb950',
-  greenD: '#0b3d16',
-  greenB: '#196127',
-  red:    '#f85149',
-  redD:   '#3d0b0b',
-  redB:   '#6e1c1c',
-  amber:  '#e3b341',
-  amberD: '#3d2b00',
-  blue:   '#58a6ff',
-  blueD:  '#0c2040',
-  blueB:  '#1a3a6e',
-  teal:   '#39d353',
+  bg:    '#050608',
+  bg1:   '#090C10',
+  bg2:   '#0D1117',
+  bg3:   '#111820',
+  bg4:   '#162030',
+  bdr:   '#1A2433',
+  bdr2:  '#243040',
+  text:  '#E2EBF3',
+  t2:    '#7A90A8',
+  t3:    '#3A4A5A',
+  green: '#00FF88',
+  greenD:'#001A0E',
+  greenB:'#004422',
+  red:   '#FF3344',
+  redD:  '#1A0205',
+  redB:  '#550A12',
+  amber: '#FFB800',
+  amberD:'#1A1200',
+  amberB:'#553C00',
+  blue:  '#0088FF',
+  blueD: '#001428',
+  blueB: '#003380',
+  cyan:  '#00CCFF',
+  mono:  "'IBM Plex Mono',monospace",
 };
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-const fmt  = (v, d=2) => v != null ? (+v).toLocaleString('en-IN', {minimumFractionDigits:d, maximumFractionDigits:d}) : '—';
-const pct  = (v) => v != null ? `${v>=0?'+':''}${(+v).toFixed(2)}%` : '—';
-const gc   = (v) => v >= 0 ? C.green : C.red;
-const mono = {fontFamily:"'JetBrains Mono',monospace"};
+const fmt = (v,d=2) => v!=null ? (+v).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d}) : '—';
+const pct = v => v!=null ? `${v>=0?'+':''}${(+v).toFixed(2)}%` : '—';
+const gc  = v => v>=0 ? C.green : C.red;
+const M   = {fontFamily:C.mono};
 
-// ── Atoms ─────────────────────────────────────────────────────────────────────
-const Pill = ({type, size='sm'}) => {
+// ─── Signal pill ──────────────────────────────────────────────────────────────
+const Pill = ({type, lg}) => {
   const map = {
-    BUY:       [C.greenD, C.green,  C.greenB],
-    SELL:      [C.redD,   C.red,    C.redB],
-    HOLD:      [C.amberD, C.amber,  '#5a4500'],
-    CALL:      [C.blueD,  C.blue,   C.blueB],
-    PUT:       [C.redD,   '#f472b6',C.redB],
-    NEUTRAL:   ['#161b22',C.text3,  C.bdr2],
-    OPEN:      [C.blueD,  C.blue,   C.blueB],
-    CLOSED:    ['#161b22',C.text3,  C.bdr],
-    EXCELLENT: [C.greenD, C.green,  C.greenB],
-    GOOD:      [C.blueD,  C.blue,   C.blueB],
-    FAIR:      [C.amberD, C.amber,  '#5a4500'],
-    POOR:      [C.redD,   C.red,    C.redB],
-    SKIP:      ['#161b22',C.text3,  C.bdr],
+    BUY:     [C.greenD, C.green,  C.greenB],
+    SELL:    [C.redD,   C.red,    C.redB],
+    HOLD:    [C.amberD, C.amber,  C.amberB],
+    CALL:    [C.blueD,  C.blue,   C.blueB],
+    PUT:     [C.redD,   '#FF44AA',C.redB],
+    NEUTRAL: [C.bg3,    C.t3,     C.bdr],
   };
-  const [bg,col,bd] = map[type] || map.NEUTRAL;
+  const [bg,col,bd] = map[type]||map.NEUTRAL;
   return (
     <span style={{
       background:bg, color:col, border:`1px solid ${bd}`,
-      fontSize: size==='lg'?12:10, fontWeight:600,
-      padding: size==='lg'?'3px 10px':'2px 7px',
-      borderRadius:4, display:'inline-block', letterSpacing:'.04em', whiteSpace:'nowrap'
+      fontSize:lg?11:9, fontWeight:700, letterSpacing:'.08em',
+      padding:lg?'3px 10px':'2px 7px', borderRadius:2,
+      whiteSpace:'nowrap', textTransform:'uppercase', ...M,
+      boxShadow:`0 0 8px ${col}22`
     }}>{type}</span>
   );
 };
 
-const Spinner = ({text='Loading...'}) => (
-  <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'48px 16px',gap:12,color:C.text3}}>
-    <div style={{width:18,height:18,border:`2px solid ${C.bdr2}`,borderTopColor:C.green,borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
-    <span style={{fontSize:12}}>{text}</span>
+// ─── Spinner ──────────────────────────────────────────────────────────────────
+const Spin = ({msg='Fetching...'}) => (
+  <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'48px 16px',gap:12}}>
+    <div style={{width:16,height:16,border:`1px solid ${C.bdr2}`,borderTopColor:C.green,borderRadius:'50%',animation:'spin .6s linear infinite'}}/>
+    <span style={{fontSize:11,color:C.t3,...M}}>{msg}</span>
   </div>
 );
 
-const SentBar = ({val}) => {
-  const pv = Math.round((val||0)*100);
-  const col = val>0.65?C.green:val<0.4?C.red:C.amber;
-  return (
-    <div>
-      <span style={{fontSize:10,color:col,...mono,fontWeight:500}}>{pv}%</span>
-      <div style={{height:2,background:C.bg3,borderRadius:1,overflow:'hidden',marginTop:3}}>
-        <div style={{width:`${pv}%`,height:'100%',background:col,borderRadius:1}}/>
-      </div>
-    </div>
-  );
-};
-
-const Card = ({children, style={}}) => (
-  <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,padding:14,marginBottom:10,...style}}>
+// ─── Section label ────────────────────────────────────────────────────────────
+const SLabel = ({children}) => (
+  <div style={{fontSize:9,color:C.t3,letterSpacing:'.15em',textTransform:'uppercase',marginBottom:8,fontWeight:600,...M}}>
     {children}
   </div>
 );
 
-const MetCard = ({label, value, sub, subColor, accent}) => (
-  <div style={{background:C.bg1,border:`1px solid ${accent||C.bdr}`,borderRadius:10,padding:'12px 14px',position:'relative',overflow:'hidden'}}>
-    {accent && <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${accent},transparent)`}}/>}
-    <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4,fontWeight:500}}>{label}</div>
-    <div style={{fontSize:18,fontWeight:700,color:C.text,...mono,letterSpacing:'-0.5px'}}>{value}</div>
-    {sub && <div style={{fontSize:10,marginTop:2,color:subColor||C.text3,...mono}}>{sub}</div>}
-  </div>
-);
-
-// ── IST Clock ─────────────────────────────────────────────────────────────────
-function ISTClock() {
-  const [info, setInfo] = useState({time:'', open:false});
+// ─── IST Clock ────────────────────────────────────────────────────────────────
+function Clock() {
+  const [s, setS] = useState({t:'',open:false});
   useEffect(() => {
     const tick = () => {
       const ist = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-      const h = ist.getHours(), m = ist.getMinutes(), d = ist.getDay();
+      const h=ist.getHours(),m=ist.getMinutes(),d=ist.getDay();
       const open = d>0&&d<6&&((h>9||(h===9&&m>=15))&&(h<15||(h===15&&m<=30)));
-      setInfo({
-        time: ist.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}),
-        open
-      });
+      setS({t:ist.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}),open});
     };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
+    tick(); const id=setInterval(tick,1000); return()=>clearInterval(id);
+  },[]);
   return (
     <div style={{display:'flex',alignItems:'center',gap:6}}>
-      <div style={{width:6,height:6,borderRadius:'50%',background:info.open?C.green:C.red,animation:info.open?'pulse 2s infinite':'none',flexShrink:0}}/>
-      <span style={{fontSize:11,color:info.open?C.green:C.red,fontWeight:500,whiteSpace:'nowrap'}}>{info.open?'OPEN':'CLOSED'}</span>
-      <span style={{fontSize:11,color:C.text3,...mono,whiteSpace:'nowrap'}}>{info.time}</span>
+      <div style={{width:5,height:5,borderRadius:'50%',background:s.open?C.green:C.red,animation:s.open?'pulse 2s infinite':'none',boxShadow:s.open?`0 0 6px ${C.green}`:'none'}}/>
+      <span style={{fontSize:10,color:s.open?C.green:C.red,fontWeight:600,...M}}>{s.open?'OPEN':'CLOSED'}</span>
+      <span style={{fontSize:10,color:C.t3,...M}}>{s.t}</span>
     </div>
   );
 }
 
-// ── Market Banner ─────────────────────────────────────────────────────────────
-function MarketBanner({data}) {
-  const indices = [['NIFTY50','Nifty 50'],['BANKNIFTY','Bank Nifty'],['SENSEX','Sensex'],['VIX','VIX']];
+// ─── Market ticker strip ──────────────────────────────────────────────────────
+function TickerStrip({data}) {
+  const items = ['NIFTY50','BANKNIFTY','SENSEX','VIX'];
+  const labels = {NIFTY50:'NIFTY',BANKNIFTY:'BANKNIFTY',SENSEX:'SENSEX',VIX:'VIX'};
   return (
-    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,marginBottom:12}}>
-      {indices.map(([k,l]) => {
+    <div style={{background:C.bg2,borderBottom:`1px solid ${C.bdr}`,padding:'6px 16px',display:'flex',gap:24,overflowX:'auto',scrollbarWidth:'none'}}>
+      {items.map(k => {
         const d = data?.[k];
         const up = (d?.change_pct||0) >= 0;
         return (
-          <MetCard key={k} label={l}
-            value={d?.value ? fmt(d.value,0) : '—'}
-            sub={d ? `${up?'▲':'▼'} ${pct(d.change_pct)}` : 'Loading...'}
-            subColor={d ? gc(d.change_pct) : C.text3}
-            accent={d ? gc(d.change_pct) : null}
-          />
+          <div key={k} style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+            <span style={{fontSize:10,color:C.t2,fontWeight:600,letterSpacing:'.08em',...M}}>{labels[k]}</span>
+            <span style={{fontSize:11,color:C.text,fontWeight:500,...M}}>{d?.value ? fmt(d.value,0) : '—'}</span>
+            {d?.change_pct ? (
+              <span style={{fontSize:10,color:gc(d.change_pct),...M,fontWeight:600}}>
+                {up?'▲':'▼'} {pct(d.change_pct)}
+              </span>
+            ) : null}
+          </div>
         );
       })}
     </div>
   );
 }
 
-// ── Signal Summary Bar ────────────────────────────────────────────────────────
-function SignalBar({stocks}) {
-  const buys  = stocks.filter(s=>s.signal==='BUY').length;
-  const sells = stocks.filter(s=>s.signal==='SELL').length;
-  const holds = stocks.filter(s=>s.signal==='HOLD').length;
-  const total = buys + sells + holds || 1;
+// ─── Metric card ─────────────────────────────────────────────────────────────
+const MetCard = ({label, value, sub, subColor, accent, small}) => (
+  <div style={{background:C.bg2,border:`1px solid ${accent?accent:C.bdr}`,borderRadius:4,padding:small?'8px 10px':'10px 12px',position:'relative',overflow:'hidden'}}>
+    {accent && <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:accent,boxShadow:`0 0 8px ${accent}`}}/>}
+    <div style={{fontSize:8,color:C.t3,letterSpacing:'.12em',textTransform:'uppercase',marginBottom:4,fontWeight:600,...M}}>{label}</div>
+    <div style={{fontSize:small?14:17,fontWeight:600,color:C.text,...M,letterSpacing:'-0.5px'}}>{value}</div>
+    {sub && <div style={{fontSize:9,marginTop:2,color:subColor||C.t3,...M}}>{sub}</div>}
+  </div>
+);
+
+// ─── Sentiment bar ────────────────────────────────────────────────────────────
+const SentBar = ({val}) => {
+  const pv = Math.round((val||0)*100);
+  const col = val>0.65?C.green:val<0.4?C.red:C.amber;
   return (
-    <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,padding:'10px 14px',marginBottom:10}}>
-      <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-        <span style={{fontSize:11,color:C.text3,fontWeight:500}}>Market sentiment</span>
-        <span style={{fontSize:11,color:C.text3,...mono}}>{stocks.filter(s=>!s.error).length} stocks</span>
-      </div>
-      <div style={{display:'flex',height:6,borderRadius:3,overflow:'hidden',gap:2,marginBottom:6}}>
-        <div style={{width:`${buys/total*100}%`,background:C.green,borderRadius:3}}/>
-        <div style={{width:`${holds/total*100}%`,background:C.amber,borderRadius:3}}/>
-        <div style={{width:`${sells/total*100}%`,background:C.red,borderRadius:3}}/>
-      </div>
-      <div style={{display:'flex',gap:16}}>
-        {[[buys,'BUY',C.green],[holds,'HOLD',C.amber],[sells,'SELL',C.red]].map(([n,l,c])=>(
-          <div key={l} style={{display:'flex',alignItems:'center',gap:5}}>
-            <div style={{width:6,height:6,borderRadius:'50%',background:c}}/>
-            <span style={{fontSize:11,color:c,fontWeight:600,...mono}}>{n} {l}</span>
-          </div>
-        ))}
+    <div>
+      <span style={{fontSize:9,color:col,...M,fontWeight:600}}>{pv}%</span>
+      <div style={{height:2,background:C.bg4,borderRadius:1,overflow:'hidden',marginTop:2}}>
+        <div style={{width:`${pv}%`,height:'100%',background:col,borderRadius:1,boxShadow:`0 0 4px ${col}`}}/>
       </div>
     </div>
   );
-}
+};
 
-// ── Alert Banner ──────────────────────────────────────────────────────────────
-function AlertBanner({alerts, onSelect, onDismiss}) {
-  if (!alerts.length) return null;
-  return (
-    <div style={{marginBottom:10}}>
-      {alerts.map((a,i) => (
-        <div key={i} className="fade-up" style={{
-          display:'flex',alignItems:'center',gap:8,padding:'8px 12px',
-          borderRadius:8,marginBottom:6,
-          background:a.to==='BUY'?C.greenD:C.redD,
-          border:`1px solid ${a.to==='BUY'?C.greenB:C.redB}`,
-        }}>
-          <div style={{width:6,height:6,borderRadius:'50%',background:a.to==='BUY'?C.green:C.red,animation:'pulse 1s infinite',flexShrink:0}}/>
-          <span style={{fontWeight:700,color:C.text,fontSize:13,...mono}}>{a.sym}</span>
-          <Pill type={a.to} size="lg"/>
-          <span style={{color:C.text2,fontSize:11,...mono}}>₹{fmt(a.price)}</span>
-          <span style={{marginLeft:'auto',fontSize:10,color:C.text3,...mono}}>{a.time}</span>
-          <button style={{background:C.bg2,border:`1px solid ${C.bdr2}`,color:C.text,padding:'2px 8px',borderRadius:4,fontSize:11,cursor:'pointer'}} onClick={()=>onSelect(a.sym)}>→</button>
-          <button style={{background:'transparent',border:'none',color:C.text3,cursor:'pointer',fontSize:14,padding:'0 2px'}} onClick={()=>onDismiss(i)}>✕</button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Stock Card (Mobile) ───────────────────────────────────────────────────────
-function StockCard({s, onClick}) {
+// ─── Stock card (mobile) ──────────────────────────────────────────────────────
+const StockCard = ({s, onClick}) => {
   if (s.error) return null;
+  const signalColor = s.signal==='BUY'?C.green:s.signal==='SELL'?C.red:C.amber;
   return (
-    <div className="hover-row" onClick={onClick} style={{
-      background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,
-      padding:'12px 14px',marginBottom:8,cursor:'pointer',
-      borderLeft:`3px solid ${s.signal==='BUY'?C.green:s.signal==='SELL'?C.red:C.bdr}`
+    <div className="rh fu" onClick={onClick} style={{
+      background:C.bg2,
+      border:`1px solid ${C.bdr}`,
+      borderLeft:`2px solid ${signalColor}`,
+      borderRadius:4,
+      padding:'10px 12px',
+      marginBottom:6,
+      cursor:'pointer',
+      boxShadow:`-2px 0 12px ${signalColor}11`
     }}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
         <div>
-          <div style={{fontWeight:700,color:C.text,fontSize:14,...mono}}>{s.sym}</div>
-          <div style={{color:C.text2,fontSize:11,marginTop:1}}>{s.name}</div>
+          <div style={{fontWeight:600,color:C.text,fontSize:13,...M,letterSpacing:'-.3px'}}>{s.sym}</div>
+          <div style={{color:C.t2,fontSize:10,marginTop:1}}>{s.name}</div>
         </div>
         <div style={{textAlign:'right'}}>
-          <div style={{fontWeight:600,color:C.text,fontSize:14,...mono}}>₹{fmt(s.price)}</div>
-          <div style={{color:gc(s.change_pct),fontSize:11,...mono,marginTop:1}}>{pct(s.change_pct)}</div>
+          <div style={{fontWeight:600,color:C.text,fontSize:13,...M}}>₹{fmt(s.price)}</div>
+          <div style={{color:gc(s.change_pct),fontSize:10,...M,marginTop:1,fontWeight:600}}>{pct(s.change_pct)}</div>
         </div>
       </div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-        <div style={{display:'flex',gap:6,alignItems:'center'}}>
+        <div style={{display:'flex',gap:5}}>
           <Pill type={s.signal}/>
-          <Pill type={s.opt_rec||'NEUTRAL'}/>
+          {s.opt_rec && s.opt_rec !== 'NEUTRAL' && <Pill type={s.opt_rec}/>}
         </div>
-        <div style={{display:'flex',gap:12,alignItems:'center'}}>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
           <div>
-            <div style={{fontSize:9,color:C.text3,textTransform:'uppercase',letterSpacing:'.06em'}}>RSI</div>
-            <div style={{fontSize:11,color:s.rsi<35?C.green:s.rsi>65?C.red:C.text2,...mono,fontWeight:500}}>{s.rsi??'—'}</div>
+            <div style={{fontSize:8,color:C.t3,letterSpacing:'.1em',...M}}>RSI</div>
+            <div style={{fontSize:10,color:s.rsi<35?C.green:s.rsi>65?C.red:C.t2,...M,fontWeight:600}}>{s.rsi??'—'}</div>
           </div>
-          <div style={{width:60}}>
-            <div style={{fontSize:9,color:C.text3,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:2}}>Sent.</div>
+          <div style={{width:50}}>
+            <div style={{fontSize:8,color:C.t3,letterSpacing:'.1em',...M,marginBottom:1}}>SENT</div>
             <SentBar val={s.sentiment??0.5}/>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
 
-// ── Desktop Stock Row ─────────────────────────────────────────────────────────
-function StockRow({s, onClick}) {
+// ─── Desktop stock row ────────────────────────────────────────────────────────
+const StockRow = ({s, onClick, i}) => {
   if (s.error) return null;
-  const cols = '76px 1fr 88px 88px 50px 100px 108px';
+  const cols = '80px 1fr 88px 84px 46px 90px 100px';
   return (
-    <div className="hover-row" style={{display:'grid',gridTemplateColumns:cols,gap:8,padding:'9px 14px',borderBottom:`1px solid rgba(33,38,45,0.6)`,cursor:'pointer',alignItems:'center'}} onClick={onClick}>
-      <span style={{fontWeight:600,color:C.text,...mono,fontSize:12}}>{s.sym}</span>
-      <span style={{color:C.text2,fontSize:11,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</span>
-      <span style={{color:C.text,...mono,fontSize:12}}>₹{fmt(s.price)}</span>
-      <span style={{color:gc(s.change_pct),fontWeight:500,...mono,fontSize:12}}>{pct(s.change_pct)}</span>
-      <span style={{color:s.rsi>65?C.red:s.rsi<35?C.green:C.text3,...mono,fontSize:11}}>{s.rsi??'—'}</span>
+    <div className="rh" onClick={onClick} style={{
+      display:'grid',gridTemplateColumns:cols,gap:8,
+      padding:'8px 14px',
+      borderBottom:`1px solid ${C.bdr}11`,
+      cursor:'pointer',alignItems:'center',
+      animationDelay:`${i*8}ms`
+    }}>
+      <span style={{fontWeight:600,color:C.text,...M,fontSize:12,letterSpacing:'-.2px'}}>{s.sym}</span>
+      <span style={{color:C.t2,fontSize:11,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</span>
+      <span style={{color:C.text,...M,fontSize:12}}>₹{fmt(s.price)}</span>
+      <span style={{color:gc(s.change_pct),fontWeight:600,...M,fontSize:11}}>{pct(s.change_pct)}</span>
+      <span style={{color:s.rsi>65?C.red:s.rsi<35?C.green:C.t3,...M,fontSize:11}}>{s.rsi??'—'}</span>
       <SentBar val={s.sentiment??0.5}/>
-      <div style={{display:'flex',gap:4}}><Pill type={s.signal}/><Pill type={s.opt_rec||'NEUTRAL'}/></div>
+      <div style={{display:'flex',gap:4,alignItems:'center'}}>
+        <Pill type={s.signal}/>
+        {s.opt_rec && s.opt_rec!=='NEUTRAL' && <Pill type={s.opt_rec}/>}
+      </div>
     </div>
   );
-}
+};
 
-// ── Stocks List ───────────────────────────────────────────────────────────────
+// ─── Stocks list ──────────────────────────────────────────────────────────────
 function StocksList({onSelect}) {
-  const [stocks,setStocks]     = useState([]);
-  const [loading,setLoading]   = useState(true);
-  const [sector,setSector]     = useState('');
-  const [sort,setSort]         = useState('signal');
-  const [search,setSearch]     = useState('');
-  const [alerts,setAlerts]     = useState([]);
-  const [countdown,setCountdown] = useState(300);
-  const [isMobile,setIsMobile] = useState(window.innerWidth < 768);
+  const [stocks, setStocks]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [sector, setSector]     = useState('');
+  const [sort, setSort]         = useState('signal');
+  const [search, setSearch]     = useState('');
+  const [isMobile, setIsMobile] = useState(window.innerWidth<768);
+  const [countdown, setCountdown] = useState(300);
   const prevRef = useRef({});
 
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  useEffect(()=>{
+    const r=()=>setIsMobile(window.innerWidth<768);
+    window.addEventListener('resize',r); return()=>window.removeEventListener('resize',r);
+  },[]);
 
-  const loadStocks = useCallback((force=false) => {
-    const url = force ? `${API}/stocks?force_refresh=true` : `${API}/stocks`;
-    axios.get(url, {timeout: 15000}).then(r => {
-      const ns = r.data.stocks || r.data || [];
-      const valid = ns.filter(s => !s.error);
-      const newAlerts = [];
-      valid.forEach(s => {
-        const old = prevRef.current[s.sym];
-        if (old && old !== s.signal && s.signal !== 'HOLD') {
-          newAlerts.push({sym:s.sym, from:old, to:s.signal, price:s.price, time:new Date().toLocaleTimeString('en-IN')});
-        }
-        prevRef.current[s.sym] = s.signal;
-      });
-      if (newAlerts.length) {
-        setAlerts(a => [...newAlerts, ...a].slice(0,5));
-        if ('Notification' in window && Notification.permission === 'granted')
-          newAlerts.forEach(a => new Notification(`${a.sym} → ${a.to}`, {body:`₹${a.price}`}));
-      }
-      setStocks(ns);
-      setLoading(false);
-    }).catch((err) => {
-      console.log('Stocks fetch error:', err.message);
-      setLoading(false);
-    });
-  }, []);
+  const load = useCallback((force=false) => {
+    const url = force?`${API}/stocks?force_refresh=true`:`${API}/stocks`;
+    axios.get(url,{timeout:15000}).then(r=>{
+      const ns = r.data.stocks||r.data||[];
+      setStocks(ns); setLoading(false);
+      ns.forEach(s=>{ prevRef.current[s.sym]=s.signal; });
+    }).catch(()=>setLoading(false));
+  },[]);
 
-  useEffect(() => {
-    loadStocks();
-    if ('Notification' in window) Notification.requestPermission();
-    const id = setInterval(() => {
-      setCountdown(n => { if (n<=1){loadStocks();return 300;} return n-1; });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [loadStocks]);
+  useEffect(()=>{
+    load();
+    const id=setInterval(()=>{
+      setCountdown(n=>{if(n<=1){load();return 300;}return n-1;});
+    },1000);
+    return()=>clearInterval(id);
+  },[load]);
 
-  const SECTORS = ['Banking','IT','Energy','FMCG','Auto','Pharma','Finance','Infra','Consumer','Conglomerate','Metal','Tech','Healthcare','Retail','Aviation','Defence','Travel'];
-  const sigOrd = {BUY:0,SELL:1,HOLD:2};
-  const valid = stocks.filter(s => !s.error);
+  const SECTORS=['Banking','IT','Energy','FMCG','Auto','Pharma','Finance','Infra','Consumer','Conglomerate','Metal','Tech','Healthcare','Retail','Aviation','Defence','Travel'];
+  const sigOrd={BUY:0,SELL:1,HOLD:2};
+  const valid = stocks.filter(s=>!s.error);
   const filtered = valid
     .filter(s=>(!search||s.sym?.includes(search.toUpperCase())||s.name?.toLowerCase().includes(search.toLowerCase()))&&(!sector||s.sector===sector))
     .sort((a,b)=>sort==='signal'?(sigOrd[a.signal]??2)-(sigOrd[b.signal]??2):sort==='change_pct'?(b.change_pct||0)-(a.change_pct||0):sort==='sentiment'?(b.sentiment||0)-(a.sentiment||0):(a.rsi||50)-(b.rsi||50));
 
+  const buys=valid.filter(s=>s.signal==='BUY').length;
+  const sells=valid.filter(s=>s.signal==='SELL').length;
+  const holds=valid.filter(s=>s.signal==='HOLD').length;
+
   return (
     <div>
-      <AlertBanner alerts={alerts} onSelect={onSelect} onDismiss={i=>setAlerts(a=>a.filter((_,j)=>j!==i))}/>
-      {valid.length > 0 && <SignalBar stocks={valid}/>}
+      {/* Signal summary */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:10}}>
+        {[[buys,'BUY SIGNALS',C.green],[holds,'HOLD',C.amber],[sells,'SELL SIGNALS',C.red]].map(([n,l,c])=>(
+          <div key={l} style={{background:C.bg2,border:`1px solid ${c}33`,borderRadius:4,padding:'8px 10px',textAlign:'center'}}>
+            <div style={{fontSize:18,fontWeight:700,color:c,...M}}>{n}</div>
+            <div style={{fontSize:8,color:C.t3,letterSpacing:'.1em',marginTop:2,...M}}>{l}</div>
+          </div>
+        ))}
+      </div>
 
-      <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap'}}>
+      {/* Filters */}
+      <div style={{display:'flex',gap:6,marginBottom:8,flexWrap:'wrap'}}>
         <input
-          style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'7px 10px',fontSize:12,color:C.text,flex:1,minWidth:100}}
-          placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)}/>
-        <select style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'7px 10px',fontSize:12,color:C.text}} value={sector} onChange={e=>setSector(e.target.value)}>
-          <option value="">All sectors</option>
-          {SECTORS.map(s=><option key={s}>{s}</option>)}
+          style={{background:C.bg3,border:`1px solid ${C.bdr2}`,borderRadius:3,padding:'5px 9px',fontSize:11,color:C.text,flex:1,minWidth:90,...M}}
+          placeholder="SEARCH..." value={search} onChange={e=>setSearch(e.target.value)}
+        />
+        <select style={{background:C.bg3,border:`1px solid ${C.bdr2}`,borderRadius:3,padding:'5px 8px',fontSize:11,color:C.text,...M}} value={sector} onChange={e=>setSector(e.target.value)}>
+          <option value="">ALL SECTORS</option>
+          {SECTORS.map(s=><option key={s}>{s.toUpperCase()}</option>)}
         </select>
-        <select style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'7px 10px',fontSize:12,color:C.text}} value={sort} onChange={e=>setSort(e.target.value)}>
-          <option value="signal">Signal</option>
-          <option value="change_pct">Change</option>
-          <option value="sentiment">Sentiment</option>
+        <select style={{background:C.bg3,border:`1px solid ${C.bdr2}`,borderRadius:3,padding:'5px 8px',fontSize:11,color:C.text,...M}} value={sort} onChange={e=>setSort(e.target.value)}>
+          <option value="signal">SIGNAL</option>
+          <option value="change_pct">CHANGE</option>
+          <option value="sentiment">SENTIMENT</option>
           <option value="rsi">RSI</option>
         </select>
-        <button className="hover-btn" style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'7px 12px',fontSize:11,color:C.text2,cursor:'pointer',whiteSpace:'nowrap'}} onClick={()=>loadStocks(true)}>↺</button>
-      </div>
-      <div style={{fontSize:10,color:C.text3,marginBottom:8,textAlign:'right',...mono}}>
-        next refresh in {countdown}s
+        <button className="btn" onClick={()=>load(true)} style={{background:C.bg3,border:`1px solid ${C.bdr2}`,color:C.t2,borderRadius:3,padding:'5px 10px',fontSize:11,cursor:'pointer',...M}}>↺</button>
+        <span style={{fontSize:9,color:C.t3,alignSelf:'center',...M}}>{countdown}s</span>
       </div>
 
-      {loading ? <Spinner text="Fetching live NSE data..."/> :
-        filtered.length === 0 ? <div style={{padding:32,textAlign:'center',color:C.text3,fontSize:12}}>No stocks found</div> :
+      {loading ? <Spin msg="FETCHING NSE DATA..."/> :
+        filtered.length===0 ? <div style={{padding:32,textAlign:'center',color:C.t3,fontSize:11,...M}}>NO STOCKS FOUND</div> :
         isMobile ? (
-          filtered.map(s => <StockCard key={s.sym} s={s} onClick={()=>onSelect(s.sym)}/>)
+          filtered.map(s=><StockCard key={s.sym} s={s} onClick={()=>onSelect(s.sym)}/>)
         ) : (
-          <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,overflow:'hidden'}}>
-            <div style={{display:'grid',gridTemplateColumns:'76px 1fr 88px 88px 50px 100px 108px',gap:8,padding:'7px 14px',fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',background:'rgba(22,27,34,0.8)',borderBottom:`1px solid ${C.bdr}`}}>
-              <span>Symbol</span><span>Company</span><span>Price</span><span>Change</span><span>RSI</span><span>Sentiment</span><span>Signal</span>
+          <div style={{background:C.bg2,border:`1px solid ${C.bdr}`,borderRadius:4,overflow:'hidden'}}>
+            <div style={{display:'grid',gridTemplateColumns:'80px 1fr 88px 84px 46px 90px 100px',gap:8,padding:'6px 14px',fontSize:8,color:C.t3,fontWeight:700,letterSpacing:'.12em',background:C.bg3,borderBottom:`1px solid ${C.bdr}`,...M}}>
+              <span>SYMBOL</span><span>COMPANY</span><span>PRICE</span><span>CHANGE</span><span>RSI</span><span>SENTIMENT</span><span>SIGNAL</span>
             </div>
-            {filtered.map(s => <StockRow key={s.sym} s={s} onClick={()=>onSelect(s.sym)}/>)}
+            {filtered.map((s,i)=><StockRow key={s.sym} s={s} i={i} onClick={()=>onSelect(s.sym)}/>)}
           </div>
         )
       }
@@ -388,125 +336,126 @@ function StocksList({onSelect}) {
   );
 }
 
-// ── Stock Detail ──────────────────────────────────────────────────────────────
+// ─── Stock detail ─────────────────────────────────────────────────────────────
 function StockDetail({symbol, onBack}) {
-  const [data,setData]       = useState(null);
-  const [plan,setPlan]       = useState(null);
-  const [chart,setChart]     = useState([]);
-  const [period,setPeriod]   = useState('3mo');
+  const [data,setData]     = useState(null);
+  const [plan,setPlan]     = useState(null);
+  const [chart,setChart]   = useState([]);
+  const [period,setPeriod] = useState('3mo');
   const [loading,setLoading] = useState(true);
-  const [msg,setMsg]         = useState('');
+  const [msg,setMsg]       = useState('');
 
-  useEffect(() => {
+  useEffect(()=>{
     setLoading(true);
     Promise.all([
       axios.get(`${API}/stock/${symbol}`),
       axios.get(`${API}/chart/${symbol}?period=3mo`),
       axios.get(`${API}/trade-plan/${symbol}?capital=100000`),
-    ]).then(([dr,cr,tr]) => {
+    ]).then(([dr,cr,tr])=>{
       setData(dr.data); setChart(cr.data.data||[]); setPlan(tr.data); setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [symbol]);
+    }).catch(()=>setLoading(false));
+  },[symbol]);
 
-  useEffect(() => {
+  useEffect(()=>{
     axios.get(`${API}/chart/${symbol}?period=${period}`).then(r=>setChart(r.data.data||[])).catch(()=>{});
-  }, [symbol, period]);
+  },[symbol,period]);
 
-  const addPaper = async () => {
-    if (!plan?.stop_loss) { setMsg('No trade setup'); return; }
-    try {
-      await axios.post(`${API}/paper/trades`, {
-        sym:symbol, signal:plan.signal, entry:plan.entry,
-        stop_loss:plan.stop_loss, target1:plan.target1,
-        target2:plan.target2, qty:plan.position_sizing?.quantity||1, notes:''
-      });
-      setMsg('✓ Paper trade logged!');
-      setTimeout(() => setMsg(''), 4000);
-    } catch(e) { setMsg('Failed'); }
+  const addPaper = async() => {
+    if(!plan?.stop_loss){setMsg('NO TRADE SETUP');return;}
+    try{
+      await axios.post(`${API}/paper/trades`,{sym:symbol,signal:plan.signal,entry:plan.entry,stop_loss:plan.stop_loss,target1:plan.target1,target2:plan.target2,qty:plan.position_sizing?.quantity||1,notes:''});
+      setMsg('✓ LOGGED');setTimeout(()=>setMsg(''),3000);
+    }catch{setMsg('FAILED');}
   };
 
-  if (loading) return <Spinner text={`Loading ${symbol}...`}/>;
-  if (!data) return <div style={{color:C.red,padding:20,textAlign:'center'}}>Failed to load {symbol}</div>;
+  if(loading) return <Spin msg={`LOADING ${symbol}...`}/>;
+  if(!data) return <div style={{padding:20,textAlign:'center',color:C.red,fontSize:11,...M}}>FAILED TO LOAD {symbol}</div>;
 
-  const chartColor = (data.change_pct||0) >= 0 ? C.green : C.red;
-  const hasSignal = plan?.signal==='BUY' || plan?.signal==='SELL';
-  const qc = {EXCELLENT:C.green,GOOD:C.blue,FAIR:C.amber,POOR:C.red,SKIP:C.text3};
+  const up = (data.change_pct||0)>=0;
+  const chartColor = up?C.green:C.red;
+  const hasSignal = plan?.signal==='BUY'||plan?.signal==='SELL';
 
   return (
-    <div className="fade-up">
-      <button onClick={onBack} style={{background:'transparent',border:`1px solid ${C.bdr}`,color:C.text2,padding:'6px 12px',borderRadius:6,fontSize:12,cursor:'pointer',marginBottom:14,display:'flex',alignItems:'center',gap:6}}>
-        ← All stocks
-      </button>
+    <div className="fu">
+      <button onClick={onBack} style={{background:'transparent',border:`1px solid ${C.bdr}`,color:C.t2,padding:'4px 10px',borderRadius:3,fontSize:10,cursor:'pointer',marginBottom:12,...M,letterSpacing:'.08em'}}>← BACK</button>
 
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
-        <div>
-          <div style={{fontSize:24,fontWeight:700,color:C.text,...mono,letterSpacing:'-1px'}}>{data.sym}</div>
-          <div style={{color:C.text2,fontSize:12,marginTop:2}}>{data.name} · {data.sector}</div>
-        </div>
-        <div style={{textAlign:'right'}}>
-          <div style={{fontSize:22,fontWeight:700,color:C.text,...mono}}>₹{fmt(data.price)}</div>
-          <div style={{color:gc(data.change_pct),fontWeight:500,...mono,fontSize:12,marginTop:2}}>{pct(data.change_pct)}</div>
+      {/* Header */}
+      <div style={{borderLeft:`3px solid ${up?C.green:C.red}`,paddingLeft:12,marginBottom:14}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+          <div>
+            <div style={{fontSize:22,fontWeight:700,color:C.text,...M,letterSpacing:'-1px'}}>{data.sym}</div>
+            <div style={{color:C.t2,fontSize:11,marginTop:2}}>{data.name} <span style={{color:C.t3}}>·</span> {data.sector}</div>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:24,fontWeight:700,...M,color:C.text}}>₹{fmt(data.price)}</div>
+            <div style={{color:gc(data.change_pct),fontWeight:700,...M,fontSize:12,marginTop:2}}>{pct(data.change_pct)}</div>
+          </div>
         </div>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:10}}>
-        {[['RSI',data.rsi],['52W H',data.week_high?`₹${fmt(data.week_high,0)}`:'—'],['52W L',data.week_low?`₹${fmt(data.week_low,0)}`:'—']].map(([l,v])=>(
-          <MetCard key={l} label={l} value={v??'—'} accent={l==='RSI'&&data.rsi?(data.rsi<35?C.green:data.rsi>65?C.red:null):null}/>
+      {/* Metrics */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:10}}>
+        {[['RSI',data.rsi,data.rsi<35?C.green:data.rsi>65?C.red:null],['52W HIGH',data.week_high?`₹${fmt(data.week_high,0)}`:'—',null],['52W LOW',data.week_low?`₹${fmt(data.week_low,0)}`:'—',null]].map(([l,v,ac])=>(
+          <MetCard key={l} label={l} value={v??'—'} accent={ac} small/>
         ))}
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:10}}>
-        {[['P/E',data.pe_ratio?fmt(data.pe_ratio):'—'],['Beta',data.beta?fmt(data.beta):'—'],['Sent.',data.sentiment?`${Math.round(data.sentiment*100)}%`:'—']].map(([l,v])=>(
-          <MetCard key={l} label={l} value={v??'—'}/>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:10}}>
+        {[['P/E',data.pe_ratio?fmt(data.pe_ratio):'—',null],['BETA',data.beta?fmt(data.beta):'—',null],['SENTIMENT',data.sentiment?`${Math.round(data.sentiment*100)}%`:'—',null]].map(([l,v,ac])=>(
+          <MetCard key={l} label={l} value={v??'—'} accent={ac} small/>
         ))}
       </div>
 
+      {/* Trade setup */}
       {hasSignal && plan && (
-        <Card style={{borderColor:plan.signal==='BUY'?C.greenB:C.redB,marginBottom:10}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
+        <div style={{background:C.bg2,border:`1px solid ${plan.signal==='BUY'?C.greenB:C.redB}`,borderRadius:4,padding:12,marginBottom:10,position:'relative',overflow:'hidden'}}>
+          <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:plan.signal==='BUY'?C.green:C.red,boxShadow:`0 0 12px ${plan.signal==='BUY'?C.green:C.red}`}}/>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,flexWrap:'wrap',gap:6}}>
             <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <span style={{fontSize:13,fontWeight:600,color:C.text}}>Trade setup</span>
-              <Pill type={plan.signal} size="lg"/>
+              <SLabel>TRADE SETUP</SLabel>
+              <Pill type={plan.signal} lg/>
             </div>
-            <div style={{display:'flex',gap:10,alignItems:'center'}}>
-              <span style={{fontSize:11,color:qc[plan.trade_quality]||C.text3,fontWeight:600}}>{plan.trade_quality}</span>
-              <span style={{fontSize:12,color:plan.rr_ratio>=2?C.green:plan.rr_ratio>=1?C.amber:C.red,fontWeight:700,...mono}}>R:R 1:{plan.rr_ratio}</span>
+            <div style={{display:'flex',gap:12,alignItems:'center'}}>
+              <span style={{fontSize:10,color:C.t2,...M}}>{plan.trade_quality}</span>
+              <span style={{fontSize:13,fontWeight:700,...M,color:plan.rr_ratio>=2?C.green:plan.rr_ratio>=1?C.amber:C.red}}>R:R 1:{plan.rr_ratio}</span>
             </div>
           </div>
 
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
-            {[['Entry',C.text,`₹${fmt(plan.entry)}`],['Stop loss',C.red,`₹${fmt(plan.stop_loss)}`],['Target 1',C.green,`₹${fmt(plan.target1)}`],['Target 2',C.green,`₹${fmt(plan.target2)}`]].map(([l,c,v])=>(
-              <div key={l} style={{background:C.bg2,borderRadius:8,padding:'10px 12px',border:`1px solid ${C.bdr}`}}>
-                <div style={{fontSize:10,color:C.text3,marginBottom:4,textTransform:'uppercase',letterSpacing:'.07em'}}>{l}</div>
-                <div style={{fontSize:16,fontWeight:600,color:c,...mono}}>{v}</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:8}}>
+            {[['ENTRY',C.text,`₹${fmt(plan.entry)}`],['STOP LOSS',C.red,`₹${fmt(plan.stop_loss)}`],['TARGET 1',C.green,`₹${fmt(plan.target1)}`],['TARGET 2',C.green,`₹${fmt(plan.target2)}`]].map(([l,c,v])=>(
+              <div key={l} style={{background:C.bg3,borderRadius:3,padding:'8px 10px',border:`1px solid ${C.bdr}`}}>
+                <div style={{fontSize:8,color:C.t3,letterSpacing:'.12em',marginBottom:3,...M}}>{l}</div>
+                <div style={{fontSize:15,fontWeight:700,color:c,...M}}>{v}</div>
               </div>
             ))}
           </div>
 
           {plan.position_sizing && (
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
-              {[['Qty (1% risk)',C.text,plan.position_sizing.quantity],['Total cost',C.text2,`₹${fmt(plan.position_sizing.total_cost,0)}`]].map(([l,c,v])=>(
-                <div key={l} style={{background:C.bg2,borderRadius:8,padding:'8px 12px',border:`1px solid ${C.bdr}`}}>
-                  <div style={{fontSize:10,color:C.text3,marginBottom:3,textTransform:'uppercase',letterSpacing:'.07em'}}>{l}</div>
-                  <div style={{fontSize:14,fontWeight:600,color:c,...mono}}>{v}</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10}}>
+              {[['QTY (1% RISK)',C.text,plan.position_sizing.quantity],['TOTAL COST',C.t2,`₹${fmt(plan.position_sizing.total_cost,0)}`]].map(([l,c,v])=>(
+                <div key={l} style={{background:C.bg3,borderRadius:3,padding:'8px 10px',border:`1px solid ${C.bdr}`}}>
+                  <div style={{fontSize:8,color:C.t3,letterSpacing:'.12em',marginBottom:3,...M}}>{l}</div>
+                  <div style={{fontSize:14,fontWeight:600,color:c,...M}}>{v}</div>
                 </div>
               ))}
             </div>
           )}
 
-          <button className="hover-btn" onClick={addPaper} style={{
+          <button className="btn" onClick={addPaper} style={{
             width:'100%',background:C.greenD,border:`1px solid ${C.greenB}`,
-            color:C.green,borderRadius:8,padding:'10px',fontSize:13,fontWeight:600,cursor:'pointer'
-          }}>+ Add to paper trades</button>
-          {msg && <div style={{marginTop:8,fontSize:12,color:msg.startsWith('✓')?C.green:C.red,...mono,textAlign:'center'}}>{msg}</div>}
-        </Card>
+            color:C.green,borderRadius:3,padding:'9px',fontSize:11,fontWeight:700,cursor:'pointer',...M,
+            letterSpacing:'.08em',boxShadow:`0 0 12px ${C.green}22`
+          }}>+ ADD TO PAPER TRADES</button>
+          {msg&&<div style={{marginTop:6,fontSize:10,color:msg.startsWith('✓')?C.green:C.red,...M,textAlign:'center'}}>{msg}</div>}
+        </div>
       )}
 
-      <Card>
+      {/* Chart */}
+      <div style={{background:C.bg2,border:`1px solid ${C.bdr}`,borderRadius:4,padding:'10px 12px'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <span style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',fontWeight:600}}>Price chart</span>
-          <div style={{display:'flex',gap:4}}>
+          <SLabel>PRICE CHART</SLabel>
+          <div style={{display:'flex',gap:3}}>
             {['1mo','3mo','6mo','1y'].map(p=>(
-              <button key={p} style={{background:period===p?C.bg3:'transparent',border:`1px solid ${period===p?C.bdr2:C.bdr}`,color:period===p?C.text:C.text3,borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer'}} onClick={()=>setPeriod(p)}>{p}</button>
+              <button key={p} onClick={()=>setPeriod(p)} style={{background:period===p?C.bg4:'transparent',border:`1px solid ${period===p?C.bdr2:C.bdr}`,color:period===p?C.text:C.t3,borderRadius:2,padding:'2px 7px',fontSize:9,cursor:'pointer',...M,letterSpacing:'.06em'}}>{p.toUpperCase()}</button>
             ))}
           </div>
         </div>
@@ -514,147 +463,115 @@ function StockDetail({symbol, onBack}) {
           <AreaChart data={chart} margin={{top:4,right:0,left:0,bottom:0}}>
             <defs>
               <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={chartColor} stopOpacity={0.2}/>
+                <stop offset="5%" stopColor={chartColor} stopOpacity={0.15}/>
                 <stop offset="95%" stopColor={chartColor} stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="2 4" stroke={C.bdr} vertical={false}/>
-            <XAxis dataKey="date" tick={{fontSize:9,fill:C.text3}} tickLine={false} axisLine={false} interval="preserveStartEnd"/>
-            <YAxis tick={{fontSize:9,fill:C.text3}} tickLine={false} axisLine={false} tickFormatter={v=>`₹${Math.round(v)}`} width={55}/>
-            <Tooltip contentStyle={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:6,fontSize:11}} formatter={v=>[`₹${fmt(v)}`,'Close']} labelStyle={{color:C.text2}}/>
+            <CartesianGrid strokeDasharray="1 4" stroke={C.bdr} vertical={false} opacity={0.5}/>
+            <XAxis dataKey="date" tick={{fontSize:8,fill:C.t3,fontFamily:C.mono}} tickLine={false} axisLine={false} interval="preserveStartEnd"/>
+            <YAxis tick={{fontSize:8,fill:C.t3,fontFamily:C.mono}} tickLine={false} axisLine={false} tickFormatter={v=>`₹${Math.round(v)}`} width={52}/>
+            <Tooltip contentStyle={{background:C.bg3,border:`1px solid ${C.bdr2}`,borderRadius:3,fontSize:10,fontFamily:C.mono}} formatter={v=>[`₹${fmt(v)}`,'CLOSE']} labelStyle={{color:C.t2}}/>
             <Area type="monotone" dataKey="close" stroke={chartColor} strokeWidth={1.5} fill="url(#cg)" dot={false}/>
           </AreaChart>
         </ResponsiveContainer>
-      </Card>
+      </div>
     </div>
   );
 }
 
-// ── Options ───────────────────────────────────────────────────────────────────
-function OptionsAdvisor() {
+// ─── Options ──────────────────────────────────────────────────────────────────
+function Options() {
   const [sym,setSym]     = useState('RELIANCE');
   const [data,setData]   = useState(null);
   const [loading,setLoading] = useState(false);
   const SYMS = ['RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','WIPRO','TATAMOTORS','SBIN','ITC','KOTAKBANK','AXISBANK','HCLTECH','BAJFINANCE','MARUTI','SUNPHARMA'];
 
-  const analyze = () => { setLoading(true); axios.get(`${API}/options/${sym}`).then(r=>{setData(r.data);setLoading(false);}).catch(()=>setLoading(false)); };
-
   return (
     <div>
-      <Card>
-        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
-          <div style={{flex:1,minWidth:120}}>
-            <div style={{fontSize:10,color:C.text3,marginBottom:4,textTransform:'uppercase',letterSpacing:'.07em'}}>Stock</div>
-            <select style={{background:C.bg2,border:`1px solid ${C.bdr2}`,borderRadius:8,padding:'8px 10px',fontSize:12,color:C.text,width:'100%'}} value={sym} onChange={e=>setSym(e.target.value)}>
-              {SYMS.map(s=><option key={s}>{s}</option>)}
-            </select>
+      <div style={{display:'flex',gap:8,marginBottom:10,flexWrap:'wrap'}}>
+        <select style={{background:C.bg3,border:`1px solid ${C.bdr2}`,borderRadius:3,padding:'7px 10px',fontSize:11,color:C.text,flex:1,...M}} value={sym} onChange={e=>setSym(e.target.value)}>
+          {SYMS.map(s=><option key={s}>{s}</option>)}
+        </select>
+        <button className="btn" onClick={()=>{setLoading(true);axios.get(`${API}/options/${sym}`).then(r=>{setData(r.data);setLoading(false);}).catch(()=>setLoading(false));}}
+          style={{background:C.greenD,border:`1px solid ${C.greenB}`,color:C.green,borderRadius:3,padding:'7px 16px',fontSize:11,fontWeight:700,cursor:'pointer',...M,letterSpacing:'.08em'}}>
+          ANALYZE
+        </button>
+      </div>
+      {loading&&<Spin msg="FETCHING OPTIONS..."/>}
+      {data&&!loading&&(
+        <div className="fu">
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10}}>
+            <MetCard label="SPOT PRICE" value={`₹${fmt(data.spot)}`} small/>
+            <MetCard label="ATM STRIKE" value={`₹${data.atm_strike}`} small/>
           </div>
-          <button className="hover-btn" style={{background:C.greenD,border:`1px solid ${C.greenB}`,color:C.green,borderRadius:8,padding:'8px 18px',fontSize:12,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}} onClick={analyze}>
-            {loading ? 'Loading...' : 'Analyze'}
-          </button>
-        </div>
-      </Card>
-
-      {data && (
-        <div className="fade-up">
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
-            <MetCard label="Spot price" value={`₹${fmt(data.spot)}`}/>
-            <MetCard label="ATM strike" value={`₹${data.atm_strike}`}/>
+          <div style={{background:C.bg2,border:`1px solid ${C.bdr}`,borderRadius:4,overflow:'hidden'}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 60px 1fr',borderBottom:`1px solid ${C.bdr}`,padding:'6px 10px'}}>
+              <div style={{fontSize:8,color:C.green,fontWeight:700,letterSpacing:'.1em',...M,textAlign:'center'}}>CALLS</div>
+              <div style={{fontSize:8,color:C.t3,fontWeight:700,letterSpacing:'.1em',...M,textAlign:'center'}}>STRIKE</div>
+              <div style={{fontSize:8,color:C.red,fontWeight:700,letterSpacing:'.1em',...M,textAlign:'center'}}>PUTS</div>
+            </div>
+            {(data.chain||[]).map((row,i)=>{
+              const isATM = row.strike===data.atm_strike;
+              return (
+                <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 60px 1fr',borderBottom:`1px solid ${C.bdr}11`,background:isATM?`${C.blue}11`:'transparent'}}>
+                  <div style={{padding:'6px 10px',textAlign:'center'}}>
+                    <div style={{fontSize:11,color:C.green,...M,fontWeight:row.call?.inTheMoney?700:400}}>{row.call?.lastPrice?`₹${fmt(row.call.lastPrice)}`:'—'}</div>
+                    <div style={{fontSize:8,color:C.t3,...M}}>{row.call?.openInterest?`${(row.call.openInterest/1000).toFixed(0)}K OI`:'—'}</div>
+                  </div>
+                  <div style={{padding:'6px',textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center',borderLeft:`1px solid ${C.bdr}22`,borderRight:`1px solid ${C.bdr}22`}}>
+                    <span style={{fontSize:isATM?12:10,fontWeight:isATM?700:500,color:isATM?C.cyan:C.t2,...M}}>
+                      {row.strike}{isATM&&<span style={{fontSize:7,color:C.cyan,marginLeft:2}}>ATM</span>}
+                    </span>
+                  </div>
+                  <div style={{padding:'6px 10px',textAlign:'center'}}>
+                    <div style={{fontSize:11,color:C.red,...M,fontWeight:row.put?.inTheMoney?700:400}}>{row.put?.lastPrice?`₹${fmt(row.put.lastPrice)}`:'—'}</div>
+                    <div style={{fontSize:8,color:C.t3,...M}}>{row.put?.openInterest?`${(row.put.openInterest/1000).toFixed(0)}K OI`:'—'}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
-            <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,padding:'12px 14px'}}>
-              <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:6}}>Signal</div>
-              <Pill type={data.signal||'HOLD'} size="lg"/>
-            </div>
-            <div style={{background:C.bg1,border:`1px solid ${C.bdr}`,borderRadius:10,padding:'12px 14px'}}>
-              <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:6}}>Recommendation</div>
-              <Pill type={data.opt_rec||'NEUTRAL'} size="lg"/>
-            </div>
-          </div>
-
-          <Card>
-            <div style={{fontSize:10,color:C.text3,fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10}}>Options chain</div>
-            <div style={{overflowX:'auto'}}>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
-                <thead>
-                  <tr style={{borderBottom:`1px solid ${C.bdr}`}}>
-                    <th colSpan={2} style={{color:C.green,padding:'4px 8px',textAlign:'center',fontWeight:600}}>CALLS</th>
-                    <th style={{color:C.text2,padding:'4px 8px',textAlign:'center',fontWeight:600}}>Strike</th>
-                    <th colSpan={2} style={{color:C.red,padding:'4px 8px',textAlign:'center',fontWeight:600}}>PUTS</th>
-                  </tr>
-                  <tr style={{borderBottom:`1px solid ${C.bdr}`,fontSize:10,color:C.text3}}>
-                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:500}}>Prem</th>
-                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:500}}>OI</th>
-                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:600,color:C.text2}}>—</th>
-                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:500}}>Prem</th>
-                    <th style={{padding:'3px 8px',textAlign:'center',fontWeight:500}}>OI</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data.chain||[]).map((row,i) => {
-                    const isATM = row.strike === data.atm_strike;
-                    return (
-                      <tr key={i} style={{background:isATM?'rgba(88,166,255,0.05)':'transparent',borderBottom:`1px solid rgba(33,38,45,.5)`}}>
-                        <td style={{padding:'7px 8px',textAlign:'center',color:C.green,...mono,fontWeight:row.call?.inTheMoney?600:400}}>{row.call?.lastPrice?`₹${fmt(row.call.lastPrice)}`:'—'}</td>
-                        <td style={{padding:'7px 8px',textAlign:'center',color:C.text3,...mono,fontSize:10}}>{row.call?.openInterest?`${(row.call.openInterest/1000).toFixed(0)}K`:'—'}</td>
-                        <td style={{padding:'7px 8px',textAlign:'center',color:isATM?C.blue:C.text2,...mono,fontWeight:isATM?700:500}}>
-                          {row.strike}{isATM&&<span style={{fontSize:8,color:C.blue,marginLeft:3}}>ATM</span>}
-                        </td>
-                        <td style={{padding:'7px 8px',textAlign:'center',color:C.red,...mono,fontWeight:row.put?.inTheMoney?600:400}}>{row.put?.lastPrice?`₹${fmt(row.put.lastPrice)}`:'—'}</td>
-                        <td style={{padding:'7px 8px',textAlign:'center',color:C.text3,...mono,fontSize:10}}>{row.put?.openInterest?`${(row.put.openInterest/1000).toFixed(0)}K`:'—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
         </div>
       )}
     </div>
   );
 }
 
-// ── News ──────────────────────────────────────────────────────────────────────
-function NewsFeed() {
+// ─── News ─────────────────────────────────────────────────────────────────────
+function News() {
   const [articles,setArticles] = useState([]);
   const [loading,setLoading]   = useState(true);
   const [noKey,setNoKey]       = useState(false);
 
-  useEffect(() => {
-    axios.get(`${API}/news`).then(r => {
-      if (r.data.note) setNoKey(true);
-      setArticles(r.data.articles||[]);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
+  useEffect(()=>{
+    axios.get(`${API}/news`).then(r=>{
+      if(r.data.note) setNoKey(true);
+      setArticles(r.data.articles||[]); setLoading(false);
+    }).catch(()=>setLoading(false));
+  },[]);
 
   return (
     <div>
-      {noKey && (
-        <div style={{background:C.amberD,border:`1px solid #5a4500`,borderRadius:8,padding:'10px 12px',marginBottom:10,fontSize:12,color:C.amber}}>
-          Add <code style={{fontFamily:'JetBrains Mono,monospace',background:'rgba(255,255,255,0.05)',padding:'1px 5px',borderRadius:3}}>NEWS_API_KEY</code> to .env for live news · <a href="https://newsapi.org" style={{color:C.blue}}>newsapi.org</a>
-        </div>
-      )}
-      <Card>
-        {loading ? <Spinner/> : articles.length===0 ? (
-          <div style={{padding:32,textAlign:'center',color:C.text3,fontSize:12}}>No news. Add NEWS_API_KEY to .env</div>
-        ) : articles.map((a,i) => (
-          <div key={i} style={{padding:'12px 0',borderBottom:i<articles.length-1?`1px solid ${C.bdr}`:'none'}}>
-            <a href={a.url} target="_blank" rel="noreferrer" style={{color:C.text,fontSize:13,lineHeight:1.5,fontWeight:400,display:'block',marginBottom:5}}>{a.title}</a>
-            <div style={{display:'flex',gap:8,fontSize:11,color:C.text3,alignItems:'center',flexWrap:'wrap'}}>
-              <span style={{color:C.text2,fontWeight:500}}>{a.source}</span>
-              <span>·</span>
-              <span>Sent: <span style={{color:a.sentiment>0.65?C.green:a.sentiment<0.4?C.red:C.amber,fontWeight:600,...mono}}>{Math.round(a.sentiment*100)}%</span></span>
+      {noKey&&<div style={{background:C.amberD,border:`1px solid ${C.amberB}`,borderRadius:3,padding:'8px 12px',marginBottom:10,fontSize:10,color:C.amber,...M}}>
+        ADD NEWS_API_KEY TO .ENV FOR LIVE NEWS · newsapi.org
+      </div>}
+      {loading?<Spin msg="LOADING NEWS..."/>:articles.length===0?
+        <div style={{padding:32,textAlign:'center',color:C.t3,fontSize:11,...M}}>NO NEWS DATA</div>:
+        articles.map((a,i)=>(
+          <div key={i} style={{borderBottom:`1px solid ${C.bdr}22`,padding:'10px 0'}}>
+            <a href={a.url} target="_blank" rel="noreferrer" style={{color:C.text,fontSize:12,lineHeight:1.5,display:'block',marginBottom:4,textDecoration:'none'}}>{a.title}</a>
+            <div style={{display:'flex',gap:10,fontSize:9,color:C.t3,alignItems:'center',...M}}>
+              <span style={{color:C.t2,fontWeight:600}}>{a.source}</span>
+              <span>SENT: <span style={{color:a.sentiment>0.65?C.green:a.sentiment<0.4?C.red:C.amber,fontWeight:700}}>{Math.round(a.sentiment*100)}%</span></span>
             </div>
           </div>
-        ))}
-      </Card>
+        ))
+      }
     </div>
   );
 }
 
-// ── Paper Trading ─────────────────────────────────────────────────────────────
+// ─── Paper trading ────────────────────────────────────────────────────────────
 function PaperTrading() {
   const [stats,setStats]     = useState(null);
   const [loading,setLoading] = useState(true);
@@ -662,217 +579,209 @@ function PaperTrading() {
   const [exitPrice,setExitPrice] = useState('');
   const [msg,setMsg]         = useState('');
 
-  const load = useCallback(() => {
+  const load = useCallback(()=>{
     axios.get(`${API}/paper/stats`).then(r=>{setStats(r.data);setLoading(false);}).catch(()=>setLoading(false));
   },[]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(()=>{load();},[load]);
 
-  const closeTrade = async (id) => {
-    if (!exitPrice) return;
-    try {
-      await axios.post(`${API}/paper/trades/${id}/close`, {exit_price:parseFloat(exitPrice),notes:'Manual close'});
-      setClosing(null); setExitPrice('');
-      setMsg('✓ Trade closed'); setTimeout(()=>setMsg(''),3000);
-      load();
-    } catch(e) { setMsg('Failed'); }
+  const closeTrade = async(id) => {
+    if(!exitPrice) return;
+    try{
+      await axios.post(`${API}/paper/trades/${id}/close`,{exit_price:parseFloat(exitPrice),notes:'Manual close'});
+      setClosing(null); setExitPrice(''); setMsg('✓ CLOSED'); setTimeout(()=>setMsg(''),3000); load();
+    }catch{setMsg('FAILED');}
   };
 
-  const deleteTrade = async (id) => {
-    if (!window.confirm('Delete?')) return;
-    await axios.delete(`${API}/paper/trades/${id}`);
-    load();
+  const del = async(id)=>{
+    if(!window.confirm('DELETE?')) return;
+    await axios.delete(`${API}/paper/trades/${id}`); load();
   };
 
-  if (loading) return <Spinner/>;
+  if(loading) return <Spin/>;
   const trades = stats?.trades||[];
   const open   = trades.filter(t=>t.status==='OPEN');
   const closed = trades.filter(t=>t.status==='CLOSED');
 
   return (
     <div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,marginBottom:10}}>
-        <MetCard label="Total trades" value={stats?.total_trades??0}/>
-        <MetCard label="Win rate" value={`${stats?.win_rate??0}%`} accent={stats?.win_rate>50?C.green:null}/>
-        <MetCard label="Total P&L" value={`₹${fmt(stats?.total_pnl??0,0)}`} accent={gc(stats?.total_pnl||0)} subColor={gc(stats?.total_pnl||0)}/>
-        <MetCard label="Open trades" value={stats?.open??0} accent={stats?.open?C.blue:null}/>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:12}}>
+        <MetCard label="TOTAL TRADES" value={stats?.total_trades??0} small/>
+        <MetCard label="WIN RATE" value={`${stats?.win_rate??0}%`} accent={stats?.win_rate>50?C.green:null} small/>
+        <MetCard label="TOTAL P&L" value={`₹${fmt(stats?.total_pnl??0,0)}`} accent={gc(stats?.total_pnl||0)} subColor={gc(stats?.total_pnl||0)} small/>
+        <MetCard label="OPEN TRADES" value={stats?.open??0} accent={stats?.open?C.blue:null} small/>
       </div>
 
-      {msg && <div style={{background:C.greenD,border:`1px solid ${C.greenB}`,borderRadius:8,padding:'8px 12px',marginBottom:10,fontSize:12,color:C.green,...mono}}>{msg}</div>}
+      {msg&&<div style={{background:C.greenD,border:`1px solid ${C.greenB}`,borderRadius:3,padding:'6px 10px',marginBottom:8,fontSize:10,color:C.green,...M}}>{msg}</div>}
 
-      {open.length>0 && (
-        <Card style={{marginBottom:10}}>
-          <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',fontWeight:600,marginBottom:10}}>Open trades</div>
+      {open.length>0&&(
+        <div style={{marginBottom:10}}>
+          <SLabel>OPEN TRADES</SLabel>
           {open.map(t=>(
-            <div key={t.id} style={{padding:'12px 0',borderBottom:`1px solid ${C.bdr}`}}>
+            <div key={t.id} style={{background:C.bg2,border:`1px solid ${C.bdr}`,borderRadius:4,padding:'10px 12px',marginBottom:6}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,flexWrap:'wrap',gap:6}}>
-                <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                  <span style={{fontWeight:700,color:C.text,fontSize:14,...mono}}>{t.sym}</span>
+                <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                  <span style={{fontWeight:700,color:C.text,fontSize:13,...M}}>{t.sym}</span>
                   <Pill type={t.signal}/>
-                  <span style={{fontSize:11,color:C.text3,...mono}}>×{t.qty}</span>
+                  <span style={{fontSize:9,color:C.t3,...M}}>×{t.qty} @ ₹{fmt(t.entry)}</span>
                 </div>
-                <span style={{fontSize:11,color:C.text2,...mono}}>₹{fmt(t.entry)}</span>
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:8}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4,marginBottom:8}}>
                 {[['SL',C.red,`₹${fmt(t.stop_loss)}`],['T1',C.green,`₹${fmt(t.target1)}`],['T2',C.green,`₹${fmt(t.target2)}`]].map(([l,c,v])=>(
-                  <div key={l} style={{background:C.bg2,borderRadius:6,padding:'6px 8px',border:`1px solid ${C.bdr}`}}>
-                    <div style={{fontSize:9,color:C.text3,marginBottom:2}}>{l}</div>
-                    <div style={{fontSize:12,fontWeight:600,color:c,...mono}}>{v}</div>
+                  <div key={l} style={{background:C.bg3,borderRadius:2,padding:'5px 7px',border:`1px solid ${C.bdr}`}}>
+                    <div style={{fontSize:7,color:C.t3,...M,letterSpacing:'.1em'}}>{l}</div>
+                    <div style={{fontSize:11,fontWeight:700,color:c,...M}}>{v}</div>
                   </div>
                 ))}
               </div>
-              {closing===t.id ? (
-                <div style={{display:'flex',gap:6}}>
-                  <input style={{flex:1,background:C.bg3,border:`1px solid ${C.bdr2}`,borderRadius:6,padding:'7px 10px',fontSize:12,color:C.text}} placeholder="Exit price ₹" value={exitPrice} onChange={e=>setExitPrice(e.target.value)}/>
-                  <button style={{background:C.greenD,border:`1px solid ${C.greenB}`,color:C.green,borderRadius:6,padding:'7px 14px',fontSize:12,fontWeight:600,cursor:'pointer'}} onClick={()=>closeTrade(t.id)}>Confirm</button>
-                  <button style={{background:'transparent',border:`1px solid ${C.bdr}`,color:C.text3,borderRadius:6,padding:'7px 10px',fontSize:12,cursor:'pointer'}} onClick={()=>setClosing(null)}>Cancel</button>
+              {closing===t.id?(
+                <div style={{display:'flex',gap:5}}>
+                  <input style={{flex:1,background:C.bg3,border:`1px solid ${C.bdr2}`,borderRadius:2,padding:'6px 8px',fontSize:11,color:C.text,...M}} placeholder="EXIT ₹" value={exitPrice} onChange={e=>setExitPrice(e.target.value)}/>
+                  <button style={{background:C.greenD,border:`1px solid ${C.greenB}`,color:C.green,borderRadius:2,padding:'6px 12px',fontSize:10,fontWeight:700,cursor:'pointer',...M}} onClick={()=>closeTrade(t.id)}>CONFIRM</button>
+                  <button style={{background:'transparent',border:`1px solid ${C.bdr}`,color:C.t3,borderRadius:2,padding:'6px 10px',fontSize:10,cursor:'pointer',...M}} onClick={()=>setClosing(null)}>✕</button>
                 </div>
-              ) : (
-                <div style={{display:'flex',gap:6}}>
-                  <button style={{flex:1,background:C.bg2,border:`1px solid ${C.bdr2}`,color:C.text2,borderRadius:6,padding:'7px',fontSize:12,cursor:'pointer'}} onClick={()=>setClosing(t.id)}>Close trade</button>
-                  <button style={{background:'transparent',border:`1px solid ${C.redB}`,color:C.red,borderRadius:6,padding:'7px 12px',fontSize:12,cursor:'pointer'}} onClick={()=>deleteTrade(t.id)}>Delete</button>
+              ):(
+                <div style={{display:'flex',gap:5}}>
+                  <button style={{flex:1,background:C.bg3,border:`1px solid ${C.bdr2}`,color:C.t2,borderRadius:2,padding:'6px',fontSize:10,cursor:'pointer',...M,letterSpacing:'.06em'}} onClick={()=>setClosing(t.id)}>CLOSE</button>
+                  <button style={{background:'transparent',border:`1px solid ${C.redB}`,color:C.red,borderRadius:2,padding:'6px 10px',fontSize:10,cursor:'pointer',...M}} onClick={()=>del(t.id)}>DELETE</button>
                 </div>
               )}
             </div>
           ))}
-        </Card>
+        </div>
       )}
 
-      {closed.length>0 && (
-        <Card>
-          <div style={{fontSize:10,color:C.text3,textTransform:'uppercase',letterSpacing:'.07em',fontWeight:600,marginBottom:10}}>Closed trades</div>
+      {closed.length>0&&(
+        <div>
+          <SLabel>CLOSED TRADES</SLabel>
           {closed.slice().reverse().map(t=>(
-            <div key={t.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'9px 0',borderBottom:`1px solid rgba(33,38,45,.5)`,flexWrap:'wrap',gap:6}}>
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <span style={{fontWeight:700,color:C.text,...mono,fontSize:13}}>{t.sym}</span>
+            <div key={t.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:`1px solid ${C.bdr}22`,flexWrap:'wrap',gap:4}}>
+              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <span style={{fontWeight:700,color:C.text,...M,fontSize:12}}>{t.sym}</span>
                 <Pill type={t.signal}/>
               </div>
-              <div style={{display:'flex',gap:12,alignItems:'center'}}>
-                <span style={{color:C.text2,...mono,fontSize:12}}>₹{fmt(t.entry)} → ₹{fmt(t.exit_price)}</span>
-                <span style={{color:gc(t.pnl||0),fontWeight:700,...mono,fontSize:13}}>{(t.pnl||0)>=0?'+':''}₹{fmt(t.pnl||0,0)}</span>
+              <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                <span style={{color:C.t2,...M,fontSize:10}}>₹{fmt(t.entry)}→₹{fmt(t.exit_price)}</span>
+                <span style={{color:gc(t.pnl||0),fontWeight:700,...M,fontSize:12}}>{(t.pnl||0)>=0?'+':''}₹{fmt(t.pnl||0,0)}</span>
               </div>
             </div>
           ))}
-        </Card>
+        </div>
       )}
 
-      {trades.length===0 && (
-        <Card style={{textAlign:'center',padding:40}}>
-          <div style={{fontSize:13,color:C.text2,marginBottom:6}}>No paper trades yet</div>
-          <div style={{fontSize:12,color:C.text3}}>Go to Equity Signals → click a BUY stock → Add to paper trades</div>
-        </Card>
+      {trades.length===0&&(
+        <div style={{padding:40,textAlign:'center'}}>
+          <div style={{fontSize:12,color:C.t2,marginBottom:4,...M}}>NO PAPER TRADES</div>
+          <div style={{fontSize:10,color:C.t3}}>Go to Equity Signals → click a BUY stock → Add to paper trades</div>
+        </div>
       )}
     </div>
   );
 }
 
-// ── Bottom Nav (Mobile) ───────────────────────────────────────────────────────
-function BottomNav({tab, setTab, isMobile}) {
-  if (!isMobile) return null;
-  const tabs = [
-    {k:'equity',icon:'📊',label:'Signals'},
-    {k:'options',icon:'⚡',label:'Options'},
-    {k:'paper',icon:'📈',label:'Paper'},
-    {k:'news',icon:'📰',label:'News'},
-  ];
+// ─── Bottom nav ───────────────────────────────────────────────────────────────
+function BottomNav({tab,setTab}) {
+  const tabs=[{k:'equity',icon:'◈',l:'SIGNALS'},{k:'options',icon:'⚡',l:'OPTIONS'},{k:'paper',icon:'◉',l:'PAPER'},{k:'news',icon:'◎',l:'NEWS'}];
   return (
     <div style={{position:'fixed',bottom:0,left:0,right:0,background:C.bg1,borderTop:`1px solid ${C.bdr}`,display:'flex',zIndex:100,paddingBottom:'env(safe-area-inset-bottom)'}}>
-      {tabs.map(({k,icon,label})=>(
+      {tabs.map(({k,icon,l})=>(
         <button key={k} onClick={()=>setTab(k)} style={{flex:1,background:'none',border:'none',padding:'10px 4px 8px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
-          <span style={{fontSize:18}}>{icon}</span>
-          <span style={{fontSize:10,color:tab===k?C.green:C.text3,fontWeight:tab===k?600:400}}>{label}</span>
-          {tab===k&&<div style={{width:16,height:2,background:C.green,borderRadius:1}}/>}
+          <span style={{fontSize:14,color:tab===k?C.green:C.t3}}>{icon}</span>
+          <span style={{fontSize:8,color:tab===k?C.green:C.t3,fontWeight:700,letterSpacing:'.1em',...M}}>{l}</span>
+          {tab===k&&<div style={{width:20,height:1,background:C.green,boxShadow:`0 0 6px ${C.green}`}}/>}
         </button>
       ))}
     </div>
   );
 }
 
-// ── App Root ──────────────────────────────────────────────────────────────────
+// ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab,setTab]           = useState('equity');
-  const [overview,setOverview] = useState(null);
-  const [selected,setSelected] = useState(null);
-  const [apiOk,setApiOk]       = useState(null);
-  const [isMobile,setIsMobile] = useState(window.innerWidth < 768);
+  const [tab,setTab]       = useState('equity');
+  const [overview,setOv]   = useState(null);
+  const [selected,setSel]  = useState(null);
+  const [apiOk,setApiOk]   = useState(null);
+  const [isMobile,setMob]  = useState(window.innerWidth<768);
 
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  useEffect(()=>{
+    const r=()=>setMob(window.innerWidth<768);
+    window.addEventListener('resize',r); return()=>window.removeEventListener('resize',r);
+  },[]);
 
-  useEffect(() => {
+  useEffect(()=>{
     axios.get(`${API}/health`).then(()=>setApiOk(true)).catch(()=>setApiOk(false));
-    const loadOv = () => axios.get(`${API}/market/overview`).then(r=>setOverview(r.data)).catch(()=>{});
-    loadOv();
-    const id = setInterval(loadOv, 60000);
-    return () => clearInterval(id);
-  }, []);
+    const ov=()=>axios.get(`${API}/market/overview`).then(r=>setOv(r.data)).catch(()=>{});
+    ov(); const id=setInterval(ov,60000); return()=>clearInterval(id);
+  },[]);
 
-  const desktopTabs = [['equity','Equity signals'],['options','Options'],['paper','Paper trading'],['news','News']];
+  const tabs=[['equity','SIGNALS'],['options','OPTIONS'],['paper','PAPER'],['news','NEWS']];
 
   return (
-    <div style={{minHeight:'100vh',background:C.bg,color:C.text,fontFamily:"'Inter',sans-serif",paddingBottom:isMobile?70:0}}>
-      {/* Nav */}
-      <nav style={{background:'rgba(10,10,15,0.95)',backdropFilter:'blur(16px)',borderBottom:`1px solid ${C.bdr}`,padding:`0 ${isMobile?12:24}px`,display:'flex',alignItems:'center',height:48,position:'sticky',top:0,zIndex:100,gap:isMobile?8:0}}>
-        <div style={{display:'flex',alignItems:'center',gap:6,marginRight:isMobile?'auto':24}}>
-          <div style={{width:7,height:7,borderRadius:'50%',background:C.green,animation:'pulse 2s infinite',flexShrink:0}}/>
-          <span style={{fontSize:14,fontWeight:700,color:C.text,letterSpacing:'-0.3px',whiteSpace:'nowrap'}}>
-            NiftySignal<span style={{color:C.green}}>.</span>AI
+    <div style={{minHeight:'100vh',background:C.bg,color:C.text,fontFamily:"'IBM Plex Sans',sans-serif",paddingBottom:isMobile?65:0}}>
+      {/* Navbar */}
+      <nav style={{background:C.bg1,borderBottom:`1px solid ${C.bdr}`,padding:`0 ${isMobile?12:20}px`,height:44,display:'flex',alignItems:'center',position:'sticky',top:0,zIndex:100}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginRight:isMobile?'auto':24}}>
+          <div style={{width:6,height:6,background:C.green,borderRadius:'50%',animation:'pulse 2s infinite',boxShadow:`0 0 8px ${C.green}`}}/>
+          <span style={{fontSize:13,fontWeight:600,color:C.text,...M,letterSpacing:'-.3px'}}>
+            NIFTY<span style={{color:C.green}}>SIGNAL</span><span style={{color:C.t3,fontWeight:400}}>.AI</span>
           </span>
         </div>
 
-        {!isMobile && (
+        {!isMobile&&(
           <div style={{display:'flex',height:'100%'}}>
-            {desktopTabs.map(([k,l])=>(
-              <button key={k} style={{padding:'0 14px',height:48,fontSize:12,fontWeight:tab===k?500:400,color:tab===k?C.text:C.text2,cursor:'pointer',border:'none',background:'none',borderBottom:tab===k?`2px solid ${C.green}`:'2px solid transparent',transition:'all .15s',whiteSpace:'nowrap'}} onClick={()=>{setTab(k);setSelected(null);}}>
-                {l}
-              </button>
+            {tabs.map(([k,l])=>(
+              <button key={k} onClick={()=>{setTab(k);setSel(null);}} style={{
+                padding:'0 14px',height:44,fontSize:10,fontWeight:700,letterSpacing:'.1em',
+                color:tab===k?C.green:C.t3,cursor:'pointer',border:'none',background:'none',
+                borderBottom:tab===k?`1px solid ${C.green}`:'1px solid transparent',
+                ...M, transition:'color .15s'
+              }}>{l}</button>
             ))}
           </div>
         )}
 
         <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:isMobile?8:16}}>
-          {!isMobile && <ISTClock/>}
-          <div style={{display:'flex',alignItems:'center',gap:5}}>
-            <div style={{width:5,height:5,borderRadius:'50%',background:apiOk===true?C.green:apiOk===false?C.red:C.amber}}/>
-            {!isMobile && <span style={{fontSize:11,color:apiOk===true?C.green:apiOk===false?C.red:C.text3,...mono}}>{apiOk===true?'connected':apiOk===false?'offline':'...'}</span>}
+          {!isMobile&&<Clock/>}
+          <div style={{display:'flex',alignItems:'center',gap:4}}>
+            <div style={{width:4,height:4,borderRadius:'50%',background:apiOk===true?C.green:apiOk===false?C.red:C.amber,boxShadow:apiOk===true?`0 0 5px ${C.green}`:undefined}}/>
+            {!isMobile&&<span style={{fontSize:9,color:apiOk===true?C.green:apiOk===false?C.red:C.t3,...M,letterSpacing:'.08em'}}>{apiOk===true?'CONNECTED':apiOk===false?'OFFLINE':'...'}</span>}
           </div>
         </div>
       </nav>
 
-      {/* Main */}
-      <div style={{padding:`12px ${isMobile?12:24}px`,maxWidth:1400,margin:'0 auto'}}>
-        {apiOk===false && (
-          <div style={{background:C.redD,border:`1px solid ${C.redB}`,borderRadius:8,padding:'10px 12px',marginBottom:10,fontSize:12,color:C.red}}>
-            Backend offline — check Railway deployment
+      {/* Ticker */}
+      <TickerStrip data={overview}/>
+
+      {/* Mobile header extras */}
+      {isMobile&&(
+        <div style={{padding:'6px 12px',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:`1px solid ${C.bdr}22`}}>
+          <Clock/>
+          <span style={{fontSize:9,color:apiOk===true?C.green:C.red,...M,fontWeight:700}}>{apiOk===true?'● CONNECTED':'● OFFLINE'}</span>
+        </div>
+      )}
+
+      {/* Content */}
+      <div style={{padding:`10px ${isMobile?12:20}px`,maxWidth:1440,margin:'0 auto'}}>
+        {apiOk===false&&(
+          <div style={{background:C.redD,border:`1px solid ${C.redB}`,borderRadius:3,padding:'8px 12px',marginBottom:10,fontSize:10,color:C.red,...M,letterSpacing:'.04em'}}>
+            BACKEND OFFLINE — CHECK RAILWAY DEPLOYMENT
           </div>
         )}
 
-        {isMobile && (
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-            <ISTClock/>
-            <span style={{fontSize:10,color:apiOk===true?C.green:C.red,...mono}}>{apiOk===true?'● connected':'● offline'}</span>
-          </div>
+        {tab==='equity'&&(selected
+          ?<StockDetail symbol={selected} onBack={()=>setSel(null)}/>
+          :<StocksList onSelect={s=>{setSel(s);}}/>
         )}
-
-        <MarketBanner data={overview}/>
-
-        {tab==='equity' && (selected
-          ? <StockDetail symbol={selected} onBack={()=>setSelected(null)}/>
-          : <StocksList onSelect={s=>{setSelected(s);}}/>
-        )}
-        {tab==='options' && <OptionsAdvisor/>}
-        {tab==='paper'   && <PaperTrading/>}
-        {tab==='news'    && <NewsFeed/>}
+        {tab==='options'&&<Options/>}
+        {tab==='paper'&&<PaperTrading/>}
+        {tab==='news'&&<News/>}
       </div>
 
-      <BottomNav tab={tab} setTab={(k)=>{setTab(k);setSelected(null);}} isMobile={isMobile}/>
+      {isMobile&&<BottomNav tab={tab} setTab={k=>{setTab(k);setSel(null);}}/>}
 
-      {!isMobile && (
-        <div style={{textAlign:'center',padding:'12px 24px',borderTop:`1px solid ${C.bdr}`,fontSize:10,color:C.text3}}>
-          NiftySignal AI · Research purposes only · Not SEBI-registered investment advice
+      {!isMobile&&(
+        <div style={{textAlign:'center',padding:'10px 20px',borderTop:`1px solid ${C.bdr}22`,fontSize:8,color:C.t3,...M,letterSpacing:'.1em'}}>
+          NIFTYSIGNAL.AI · FOR RESEARCH PURPOSES ONLY · NOT SEBI-REGISTERED INVESTMENT ADVICE
         </div>
       )}
     </div>
