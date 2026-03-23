@@ -13,6 +13,13 @@ import schedule
 
 load_dotenv()
 
+# Import Telegram alerts
+try:
+    from telegram_alerts import check_and_alert, send_market_open_alert, send_daily_summary
+    TELEGRAM_ENABLED = True
+except ImportError:
+    TELEGRAM_ENABLED = False
+
 # Import multi-source data fetcher
 try:
     from nse_data import fetch_stock_full, calc_rsi, calc_macd, calc_ema, get_historical_data
@@ -51,6 +58,12 @@ def background_scheduler():
                 json.dump(stocks, f, default=str)
             mem_set("stocks_all", stocks)
             log.info(f"BG scheduler: saved {len(stocks)} stocks")
+            # Check for signal changes and send Telegram alerts
+            if TELEGRAM_ENABLED:
+                try:
+                    check_and_alert(stocks)
+                except Exception as e:
+                    log.warning(f"Telegram alert error: {e}")
 
         # Refresh indices via stooq
         from nse_data import fetch_stooq
@@ -80,6 +93,21 @@ def background_scheduler():
             mem_set("overview", result)
 
     schedule.every(5).minutes.do(run_fetch)
+
+    # Market open alert at 9:15 AM IST
+    import pytz
+    def market_open_alert():
+        if TELEGRAM_ENABLED:
+            send_market_open_alert()
+    schedule.every().day.at("03:45").do(market_open_alert)  # 9:15 AM IST = 3:45 AM UTC
+
+    # Daily summary at 3:30 PM IST (market close)
+    def market_close_summary():
+        if TELEGRAM_ENABLED:
+            stocks = mem_get("stocks_all") or []
+            if stocks:
+                send_daily_summary(stocks)
+    schedule.every().day.at("10:00").do(market_close_summary)  # 3:30 PM IST = 10:00 AM UTC
 
     log.info("Background scheduler started — auto-refreshes every 5 min")
     # Wait 10 seconds before first fetch to let server start
